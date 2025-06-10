@@ -1,7 +1,7 @@
 "use client"
 
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/src/components/ui/sidebar";
-import { LINKS } from "@/src/consts/links.conts";
+import { LINKS } from "@/src/consts/links.consts";
 import Link from "next/link";
 import { InfoCircle } from "./components/InfoCircleFill";
 import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
