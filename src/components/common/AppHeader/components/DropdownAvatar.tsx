@@ -1,6 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
-import { Button } from "@/src/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
+import { Button } from "@/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/ui/dropdown-menu";
 import { LogOut } from "lucide-react";
 
 export function DropdownAvatar() {

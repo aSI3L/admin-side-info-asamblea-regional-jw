@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/src/components/ui/card";
+import { Card, CardContent } from "@/ui/card";
 import { LINKS } from "@/src/consts/links.consts";
 import Link from "next/link";
 

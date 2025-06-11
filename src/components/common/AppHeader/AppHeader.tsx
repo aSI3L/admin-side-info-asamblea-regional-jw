@@ -1,6 +1,6 @@
-import { SidebarTrigger } from "@/src/components/ui/sidebar";
+import { SidebarTrigger } from "@/ui/sidebar";
 import { DropdownAvatar } from "./components/DropdownAvatar";
-import { Separator } from "@/src/components/ui/separator";
+import { Separator } from "@/ui/separator";
 
 export function AppHeader() {
   return (
