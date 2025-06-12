@@ -1,12 +1,12 @@
 "use client"
 
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/ui/sidebar";
-import { LINKS } from "@/src/consts/links.consts";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { LINKS } from "@/consts/links.consts";
 import Link from "next/link";
 import { InfoCircle } from "./components/InfoCircleFill";
-import { Avatar, AvatarFallback } from "@/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { X } from "lucide-react";
-import { Button } from "@/ui/button";
+import { Button } from "@/components/ui/button";
 
 export function AppSidebar() {
   const { toggleSidebar } = useSidebar()
