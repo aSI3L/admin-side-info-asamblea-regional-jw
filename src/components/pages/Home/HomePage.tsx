@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/ui/card";
-import { LINKS } from "@/src/consts/links.consts";
+import { Card, CardContent } from "@/components/ui/card";
+import { LINKS } from "@/consts/links.consts";
 import Link from "next/link";
 
 export default function HomePage() {
