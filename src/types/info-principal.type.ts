@@ -1,9 +1,4 @@
-export interface InfoPrincipalType {
-    mainTitle: string;
-    year: number;
-    color: {
-        primary: string;
-        secondary: string;
-        accent: string;
-    }
-}
+import { z } from "zod/v4";
+import { infoPrincipalFormSchema } from "@/components/pages/InfoPrincipal/components/FormInfoPrincipal";
+
+export type InfoPrincipalType = z.infer<typeof infoPrincipalFormSchema>;
