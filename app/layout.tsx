@@ -25,10 +25,8 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <main className="flex flex-col">
-                <AppHeader />
-                {children}
-              </main>
+              <AppHeader />
+              {children}
             </SidebarInset>
           </SidebarProvider>
         </body>
