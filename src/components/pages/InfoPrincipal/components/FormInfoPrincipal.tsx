@@ -5,13 +5,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4"
-import { InfoPrincipalType } from "@/types/info-principal.type";
+import { InfoPrincipalSchemaType } from "@/types/info-principal.type";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useInfoPrincipal } from "@/hooks/useInfoPrincipal";
 
 export const infoPrincipalFormSchema = z.object({
   mainTitle: z.string().min(1, "El título principal es obligatorio"),
-  year: z.string().regex(/^[0-9]*$/).min(4, "El año debe ser un número valido").max(4),
+  year: z.string().regex(/^[0-9]*$/, "El año debe ser un número entero").min(4, "El año debe ser un número valido").max(4),
   color: z.object({
     primary: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "El color primario debe tener un formato hexadecimal válido"),
     secondary: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "El color secundario debe tener un formato hexadecimal válido"),
@@ -20,21 +21,28 @@ export const infoPrincipalFormSchema = z.object({
 });
 
 export function FormInfoPrincipal() {
-  const form = useForm<InfoPrincipalType>({
+  const { infoPrincipal, createInfoPrincipal} = useInfoPrincipal()
+
+  const form = useForm<InfoPrincipalSchemaType>({
     resolver: zodResolver(infoPrincipalFormSchema),
     defaultValues: {
-      mainTitle: "",
-      year: "",
+      mainTitle: infoPrincipal.mainTitle,
+      year: infoPrincipal.year === 0 ? "" : infoPrincipal.year.toString(),
       color: {
-        primary: "",
-        secondary: "",
-        accent: "",
+        primary: infoPrincipal.color.primary,
+        secondary: infoPrincipal.color.secondary,
+        accent: infoPrincipal.color.accent,
       }
     }
   })
 
-  const onSubmit = (data: InfoPrincipalType) => {
+  const onSubmit = (data: InfoPrincipalSchemaType) => {
     console.log("Form submitted with data:", data);
+    const formattedData = {
+      ...data,
+      year: parseInt(data.year)
+    }
+    createInfoPrincipal(formattedData)
   }
   return (
     <Card className="w-full max-w-2xl p-6">
