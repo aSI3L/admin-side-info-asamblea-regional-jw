@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useInfoPrincipal } from "@/hooks/useInfoPrincipal";
 import { ImageIcon, Upload, X } from "lucide-react";
-import { ACCEPTED_IMAGE_TYPES, MAX_FILE_SIZE } from "@/consts/imageFile.consts";
+import { ACCEPTED_IMAGE_TYPES } from "@/consts/imageFile.consts";
 import { useFormImageUpload } from "@/hooks/useFormImageUpload";
 
 export const infoPrincipalFormSchema = z.object({
@@ -21,17 +21,11 @@ export const infoPrincipalFormSchema = z.object({
     secondary: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Formato hexadecimal no válido"),
     accent: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Formato hexadecimal no válido"),
   }),
-  imageUrl: z.instanceof(File)
-    .refine((file) => file.size <= MAX_FILE_SIZE, {
-      message: "El archivo debe ser menor a 5MB.",
-    })
-    .refine((file) => ACCEPTED_IMAGE_TYPES.includes(file.type), {
-      message: "Solo se aceptan archivos .jpg, .jpeg, .png y .webp.",
-    }).optional().or(z.string())
+  imageUrl: z.instanceof(File).or(z.url()).optional()
 });
 
 export function FormInfoPrincipal() {
-  const { infoPrincipal } = useInfoPrincipal()
+  const { infoPrincipal, createInfoPrincipal } = useInfoPrincipal()
 
   const form = useForm<InfoPrincipalSchemaType>({
     resolver: zodResolver(infoPrincipalFormSchema),
@@ -47,16 +41,20 @@ export function FormInfoPrincipal() {
     }
   })
 
-  const { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
+  const { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
 
 
-  const onSubmit = (data: InfoPrincipalSchemaType) => {
-    console.log("Form submitted with data:", data);
-    /*const formattedData = {
-      ...data,
-      year: parseInt(data.year)
+  const onSubmit = async (data: InfoPrincipalSchemaType) => {
+    const responseUploadImage = await uploadToImgBB("banner")
+
+    if (responseUploadImage) {
+      const formattedData = {
+        ...data,
+        year: parseInt(data.year),
+        imageUrl: responseUploadImage
+      }
+      createInfoPrincipal(formattedData)
     }
-    createInfoPrincipal(formattedData)*/
   }
 
   return (
