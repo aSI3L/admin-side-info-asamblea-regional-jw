@@ -16,11 +16,13 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
             primary: "",
             secondary: "",
             accent: ""
-        }
+        },
+        imageUrl: ""
     },
     getInfoPrincipal: async () => {
         const infoPrincipalResponse = await infoPrincipalService.getAll()
         if (infoPrincipalResponse && Array.isArray(infoPrincipalResponse) && infoPrincipalResponse.length > 0) {
+            console.log(infoPrincipalResponse)
             set(() => ({ infoPrincipal: infoPrincipalResponse[0] }))
         } else {
             console.log("Error: Get Info Principal")

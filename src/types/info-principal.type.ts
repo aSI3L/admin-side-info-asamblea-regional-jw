@@ -3,4 +3,4 @@ import { infoPrincipalFormSchema } from "@/components/pages/InfoPrincipal/compon
 import { Overwrite } from "@/lib/utils";
 
 export type InfoPrincipalSchemaType = z.infer<typeof infoPrincipalFormSchema>;
-export type InfoPrincipalType = { id?: string} & Overwrite<InfoPrincipalSchemaType, { year: number}>
+export type InfoPrincipalType = { id?: string} & Overwrite<InfoPrincipalSchemaType, { year: number, imageUrl: string }>
