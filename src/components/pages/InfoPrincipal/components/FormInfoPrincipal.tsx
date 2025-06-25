@@ -12,6 +12,9 @@ import { useInfoPrincipal } from "@/hooks/useInfoPrincipal";
 import { ImageIcon, Upload, X } from "lucide-react";
 import { ACCEPTED_IMAGE_TYPES } from "@/consts/imageFile.consts";
 import { useFormImageUpload } from "@/hooks/useFormImageUpload";
+import Image from "next/image";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
+import { useEffect } from "react";
 
 export const infoPrincipalFormSchema = z.object({
   mainTitle: z.string().min(1, "El título principal es obligatorio"),
@@ -25,7 +28,7 @@ export const infoPrincipalFormSchema = z.object({
 });
 
 export function FormInfoPrincipal() {
-  const { infoPrincipal, createInfoPrincipal } = useInfoPrincipal()
+  const { infoPrincipal, createInfoPrincipal, loadingInfoPrincipal } = useInfoPrincipal()
 
   const form = useForm<InfoPrincipalSchemaType>({
     resolver: zodResolver(infoPrincipalFormSchema),
@@ -37,12 +40,11 @@ export function FormInfoPrincipal() {
         secondary: infoPrincipal.color.secondary,
         accent: infoPrincipal.color.accent,
       },
-      imageUrl: infoPrincipal.imageUrl
+      imageUrl: infoPrincipal.imageUrl ? new File([], infoPrincipal.imageUrl) : undefined
     }
   })
 
   const { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
-
 
   const onSubmit = async (data: InfoPrincipalSchemaType) => {
     const responseUploadImage = await uploadToImgBB("banner")
@@ -53,9 +55,26 @@ export function FormInfoPrincipal() {
         year: parseInt(data.year),
         imageUrl: responseUploadImage
       }
-      createInfoPrincipal(formattedData)
+      await createInfoPrincipal(formattedData)
     }
   }
+
+  useEffect(() => {
+    if (infoPrincipal && infoPrincipal.mainTitle) {
+      form.reset({
+        mainTitle: infoPrincipal.mainTitle,
+        year: infoPrincipal.year === 0 ? "" : infoPrincipal.year.toString(),
+        color: {
+          primary: infoPrincipal.color.primary,
+          secondary: infoPrincipal.color.secondary,
+          accent: infoPrincipal.color.accent,
+        },
+        imageUrl: infoPrincipal.imageUrl
+      });
+    }
+  }, [infoPrincipal, form]);
+
+  if (loadingInfoPrincipal) return <LoadingSpinner />
 
   return (
     <Card className="max-w-2xl w-full px-0 py-6 md:py-4 overflow-hidden">
@@ -198,9 +217,11 @@ export function FormInfoPrincipal() {
                         <Card className="p-0 overflow-hidden cursor-pointer">
                           <CardContent className="p-0">
                             <div className="relative">
-                              <img
-                                src={imagePreview || "/placeholder.svg"}
+                              <Image
+                                src={typeof imagePreview === "string" ? imagePreview : "/placeholder.svg"}
                                 alt="Image Preview"
+                                width={1}
+                                height={1}
                                 className="w-full h-48 md:h-64 object-cover"
                               />
                               <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
@@ -245,7 +266,7 @@ export function FormInfoPrincipal() {
                 </FormItem>
               )}
             />            
-            <Button className="cursor-pointer" type="submit">Submit</Button>
+            <Button className="cursor-pointer" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <LoadingSpinner/> : "Submit"}</Button>
           </form>
         </Form>
       </CardContent>
