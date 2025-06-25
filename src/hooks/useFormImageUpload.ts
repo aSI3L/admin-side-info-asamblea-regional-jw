@@ -16,6 +16,7 @@ export const useFormImageUpload = <T extends FieldValues> (
     const uploadToImgBB = async (imageName: string): Promise<string | null> => {
       const API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY
 
+      if (image === undefined) return null
       if (!API_KEY) throw new Error("API Key de imgBB no configurada")
       if (!(image instanceof Blob)) throw new Error("Error: Blob.")
         

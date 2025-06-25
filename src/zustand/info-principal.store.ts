@@ -6,6 +6,7 @@ interface InfoPrincipalStore {
     infoPrincipal: InfoPrincipalType
     getInfoPrincipal: () => Promise<void>
     createInfoPrincipal: (data: InfoPrincipalType) => Promise<void>
+    loadingInfoPrincipal: boolean
 }
 
 export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
@@ -19,12 +20,14 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
         },
         imageUrl: ""
     },
+    loadingInfoPrincipal: false,
     getInfoPrincipal: async () => {
+        set({ loadingInfoPrincipal: true })
         const infoPrincipalResponse = await infoPrincipalService.getAll()
         if (infoPrincipalResponse && Array.isArray(infoPrincipalResponse) && infoPrincipalResponse.length > 0) {
-            console.log(infoPrincipalResponse)
-            set(() => ({ infoPrincipal: infoPrincipalResponse[0] }))
+            set(() => ({ infoPrincipal: infoPrincipalResponse[0], loadingInfoPrincipal: false }))
         } else {
+            set(() => ({ loadingInfoPrincipal: false }))
             console.log("Error: Get Info Principal")
         }
     },
