@@ -44,7 +44,15 @@ export function FormInfoPrincipal() {
     }
   })
 
-  const { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
+  const { 
+    imagePreview,
+    dragActive,
+    handleDrag,
+    handleDrop,
+    removeImage,
+    handleChangeImage,
+    uploadToImgBB
+  } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
 
   const onSubmit = async (data: InfoPrincipalSchemaType) => {
     const responseUploadImage = await uploadToImgBB("banner")
