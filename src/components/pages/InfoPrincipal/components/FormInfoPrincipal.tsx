@@ -13,7 +13,7 @@ import { ImageIcon, Upload, X } from "lucide-react";
 import { ACCEPTED_IMAGE_TYPES } from "@/consts/imageFile.consts";
 import { useFormImageUpload } from "@/hooks/useFormImageUpload";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 
 export const infoPrincipalFormSchema = z.object({
@@ -29,6 +29,7 @@ export const infoPrincipalFormSchema = z.object({
 
 export function FormInfoPrincipal() {
   const { infoPrincipal, createInfoPrincipal, loadingInfoPrincipal } = useInfoPrincipal()
+  const [disabled, setDisabled] = useState(infoPrincipal ? true : false)
 
   const form = useForm<InfoPrincipalSchemaType>({
     resolver: zodResolver(infoPrincipalFormSchema),
@@ -41,7 +42,8 @@ export function FormInfoPrincipal() {
         accent: infoPrincipal.color.accent,
       },
       imageUrl: infoPrincipal.imageUrl || undefined
-    }
+    },
+    disabled: disabled
   })
 
   const { 
@@ -59,6 +61,7 @@ export function FormInfoPrincipal() {
       form.setError('imageUrl', { type: "manual", message: "La imagen es obligatoria."})
       return
     }
+    console.log(data);
 
     const responseUploadImage = await uploadToImgBB("banner")
 
@@ -69,6 +72,7 @@ export function FormInfoPrincipal() {
         imageUrl: responseUploadImage
       }
       await createInfoPrincipal(infoPrincipal.id as string, formattedData)
+      setDisabled((prev) => !prev)
     }
   }
 
@@ -105,7 +109,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel htmlFor="mainTitle">Título Principal</FormLabel>
                   <FormControl>
-                    <Input id="mainTitle" placeholder="Adoración Pura" {...field}/>
+                    <Input id="mainTitle" className={`${disabled && 'bg-gray-200'}`} placeholder="Adoración Pura" {...field} />
                   </FormControl>
                   { form.formState.errors.mainTitle && <FormMessage>{form.formState.errors.mainTitle.message}</FormMessage>}
                 </FormItem>
@@ -118,7 +122,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Año de la Asamblea</FormLabel>
                   <FormControl>
-                    <Input placeholder="2025" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="2025" {...field}/>
                   </FormControl>
                   { form.formState.errors.year && <FormMessage>{form.formState.errors.year.message}</FormMessage>}
                 </FormItem>
@@ -131,7 +135,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color Primario</FormLabel>
                   <FormControl>
-                    <Input placeholder="#000000" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#000000" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.primary ? <FormMessage>{form.formState.errors.color.primary.message}</FormMessage> : <FormDescription>Aplicado al fondo</FormDescription>}
                 </FormItem>
@@ -144,7 +148,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color Secundario</FormLabel>
                   <FormControl>
-                    <Input placeholder="#FFFFFF" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#FFFFFF" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.secondary ? <FormMessage>{form.formState.errors.color.secondary.message}</FormMessage> : <FormDescription>Aplicado a textos, sombras, etc.</FormDescription>}
                 </FormItem>
@@ -157,7 +161,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color de Acento</FormLabel>
                   <FormControl>
-                    <Input placeholder="#FFF000" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#FFF000" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.accent ? <FormMessage>{form.formState.errors.color.accent.message}</FormMessage> : <FormDescription>Aplicado a botones o elementos que resalten</FormDescription>}
                 </FormItem>
@@ -227,7 +231,7 @@ export function FormInfoPrincipal() {
                             </CardContent>
                           </Card>
                         ) : (
-                        <Card className="p-0 overflow-hidden cursor-pointer">
+                        <Card className="p-0 overflow-hidden">
                           <CardContent className="p-0">
                             <div className="relative">
                               <Image
@@ -235,10 +239,10 @@ export function FormInfoPrincipal() {
                                 alt="Image Preview"
                                 width={500}
                                 height={500}
-                                className="w-full h-48 md:h-64 object-cover"
+                                className={`${disabled && 'opacity-60'} w-full h-48 md:h-64 object-cover`}
                               />
-                              <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
-                                <Button
+                              <div className={`${!disabled && "hover:opacity-100"} hidden lg:flex absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center`}>
+                                { !disabled && <Button
                                   type="button"
                                   variant="destructive"
                                   size="sm"
@@ -247,11 +251,11 @@ export function FormInfoPrincipal() {
                                 >
                                   <X className="h-4 w-4" />
                                   Eliminar
-                                </Button>
+                                </Button> }
                               </div>
                               {/* Botón visible en mobile */}
                               <div className="absolute top-2 right-2 md:hidden">
-                                <Button
+                                { !disabled && <Button
                                   type="button"
                                   variant="destructive"
                                   size="sm"
@@ -259,7 +263,7 @@ export function FormInfoPrincipal() {
                                   className="h-8 w-8 p-0 rounded-full"
                                 >
                                   <X className="h-4 w-4" />
-                                </Button>
+                                </Button> }
                               </div>
                             </div>
                             <div className="p-3 md:p-4 bg-gray-50 dark:bg-gray-800">
@@ -278,8 +282,16 @@ export function FormInfoPrincipal() {
                   
                 </FormItem>
               )}
-            />            
-            <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : "Submit"}</Button>
+            />
+            <div className="flex gap-2 justify-end">          
+              { disabled && <Button className="cursor-pointer w-20" onClick={() => setDisabled((prev) => !prev)}>Editar</Button> }
+              { !disabled && 
+                  <>
+                    <Button className="cursor-pointer w-20" variant="destructive" onClick={() => setDisabled((prev) => !prev)}>Cancelar</Button>
+                    <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : "Enviar"}</Button>
+                  </>
+              }
+            </div>
           </form>
         </Form>
       </CardContent>
