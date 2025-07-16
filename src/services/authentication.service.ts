@@ -116,3 +116,9 @@ export const logout = async () => {
         console.log(error)
     }
 }
+
+export const verifyIsAuthorized = async (email: string): Promise<UserType | null> => {
+    const verifiedUser = await usuariosAutorizadosService.getById(email)
+
+    return verifiedUser
+}

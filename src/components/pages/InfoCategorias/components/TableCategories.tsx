@@ -3,13 +3,13 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCategorias } from "@/hooks/useCategorias";
 import { FormCategorias } from "./FormCategorias";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 
 export function TableCategories() {
     const { categorias, loadingCategorias, updateCategoria } = useCategorias()
 
     if (loadingCategorias) {
-        return <LoadingSpinner />
+        return <AdaptableLoadingSpinner />
     }
 
     return (

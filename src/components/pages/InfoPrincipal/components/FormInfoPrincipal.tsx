@@ -15,6 +15,7 @@ import { useFormImageUpload } from "@/hooks/useFormImageUpload";
 import Image from "next/image";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
 import { useEffect } from "react";
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 
 export const infoPrincipalFormSchema = z.object({
   mainTitle: z.string().min(1, "El título principal es obligatorio"),
@@ -82,7 +83,7 @@ export function FormInfoPrincipal() {
     }
   }, [infoPrincipal, form]);
 
-  if (loadingInfoPrincipal) return <LoadingSpinner />
+  if (loadingInfoPrincipal) return <AdaptableLoadingSpinner />
 
   return (
     <Card className="max-w-2xl w-full px-0 py-6 md:py-4 overflow-hidden">
