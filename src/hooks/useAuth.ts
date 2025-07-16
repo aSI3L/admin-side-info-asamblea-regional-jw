@@ -2,26 +2,28 @@ import { useAuthStore } from "@/zustand/authentication.store"
 
 export const useAuth = () => {
     const authUser = useAuthStore(state => state.authUser);
-    const loadingAuth = useAuthStore(state => state.loadingAuth);
+    const isLoadingAuth = useAuthStore(state => state.isLoadingAuth);
     const loginError = useAuthStore(state => state.loginError);
     const setAuthUser = useAuthStore(state => state.setAuthUser);
-    const setLoadingAuth = useAuthStore(state => state.setLoadingAuth);
+    const setIsLoadingAuth = useAuthStore(state => state.setIsLoadingAuth);
     const setLoginError = useAuthStore(state => state.setLoginError);
     const loginWithEmail = useAuthStore(state => state.loginWithEmail);
     const createWithEmail = useAuthStore(state => state.createWithEmail);
     const loginWithGoogle = useAuthStore(state => state.loginWithGoogle);
     const logout = useAuthStore(state => state.logout);
+    const verifyIsAuthorized = useAuthStore(state => state.verifyIsAuthorized)
 
     return {
         authUser,
-        loadingAuth,
+        isLoadingAuth,
         loginError,
         setAuthUser,
-        setLoadingAuth,
+        setIsLoadingAuth,
         setLoginError,
         loginWithEmail,
         createWithEmail,
         loginWithGoogle,
-        logout
+        logout,
+        verifyIsAuthorized
     }
 }

@@ -20,8 +20,9 @@ export default function RootLayout({
   return (
     <html lang="es">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased m-0`}>
-          <Auth />
-          {children}
+          <Auth>
+            {children}
+          </Auth>
         </body>
     </html>
   );
