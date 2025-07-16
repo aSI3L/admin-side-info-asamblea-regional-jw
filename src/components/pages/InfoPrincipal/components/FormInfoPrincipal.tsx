@@ -13,7 +13,6 @@ import { ImageIcon, Upload, X } from "lucide-react";
 import { ACCEPTED_IMAGE_TYPES } from "@/consts/imageFile.consts";
 import { useFormImageUpload } from "@/hooks/useFormImageUpload";
 import Image from "next/image";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
 import { useEffect } from "react";
 import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 
@@ -41,7 +40,7 @@ export function FormInfoPrincipal() {
         secondary: infoPrincipal.color.secondary,
         accent: infoPrincipal.color.accent,
       },
-      imageUrl: infoPrincipal.imageUrl ? new File([], infoPrincipal.imageUrl) : undefined
+      imageUrl: infoPrincipal.imageUrl || undefined
     }
   })
 
@@ -56,6 +55,11 @@ export function FormInfoPrincipal() {
   } = useFormImageUpload<InfoPrincipalSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', infoPrincipal.imageUrl)
 
   const onSubmit = async (data: InfoPrincipalSchemaType) => {
+    if (!data.imageUrl) { 
+      form.setError('imageUrl', { type: "manual", message: "La imagen es obligatoria."})
+      return
+    }
+
     const responseUploadImage = await uploadToImgBB("banner")
 
     if (responseUploadImage) {
@@ -64,7 +68,7 @@ export function FormInfoPrincipal() {
         year: parseInt(data.year),
         imageUrl: responseUploadImage
       }
-      await createInfoPrincipal(formattedData)
+      await createInfoPrincipal(infoPrincipal.id as string, formattedData)
     }
   }
 
@@ -78,7 +82,7 @@ export function FormInfoPrincipal() {
           secondary: infoPrincipal.color.secondary,
           accent: infoPrincipal.color.accent,
         },
-        imageUrl: infoPrincipal.imageUrl
+        imageUrl: infoPrincipal.imageUrl || undefined
       });
     }
   }, [infoPrincipal, form]);
@@ -229,8 +233,8 @@ export function FormInfoPrincipal() {
                               <Image
                                 src={typeof imagePreview === "string" ? imagePreview : "/placeholder.svg"}
                                 alt="Image Preview"
-                                width={1}
-                                height={1}
+                                width={500}
+                                height={500}
                                 className="w-full h-48 md:h-64 object-cover"
                               />
                               <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
@@ -275,7 +279,7 @@ export function FormInfoPrincipal() {
                 </FormItem>
               )}
             />            
-            <Button className="cursor-pointer" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <LoadingSpinner/> : "Submit"}</Button>
+            <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : "Submit"}</Button>
           </form>
         </Form>
       </CardContent>

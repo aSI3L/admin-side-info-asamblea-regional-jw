@@ -22,10 +22,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
     authUser: null,
     isLoadingAuth: false,
     loginError: null,
-    setAuthUser: (user: UserType | null) => set({ authUser: user }),
-    setIsLoadingAuth: (loading: boolean) => set({ isLoadingAuth: loading }),
-    setLoginError: (error: null | { type: LoginErrorType, title?: string, message?: string, email?: string }) => set({ loginError: error }),
-    loginWithEmail: async (email: string, password: string) => {
+    setAuthUser: (user) => set({ authUser: user }),
+    setIsLoadingAuth: (loading) => set({ isLoadingAuth: loading }),
+    setLoginError: (error) => set({ loginError: error }),
+    loginWithEmail: async (email, password) => {
         set({ isLoadingAuth: true });
         const result = await loginWithEmail(email, password)
         
@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
         set({ isLoadingAuth: false });
     },
-    createWithEmail: async (email: string, password: string) => {
+    createWithEmail: async (email, password) => {
         set({ isLoadingAuth: true })
         const result = await createWithEmail(email, password)
 
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
             set({ isLoadingAuth: false });
         }
     },
-    verifyIsAuthorized: async (email: string) => {
+    verifyIsAuthorized: async (email) => {
         const result = await verifyIsAuthorized(email)
         return result
     }

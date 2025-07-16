@@ -21,7 +21,7 @@ export const useCategoriasStore = create<CategoriasStore>((set) => ({
             set({ loadingCategorias: false });
         }
     },
-    updateCategoria: async (id: string, data: CategoriasType) => {
+    updateCategoria: async (id, data) => {
         console.log(data);
         await categoriasService.update(id, data)
     }
