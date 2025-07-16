@@ -1,5 +1,5 @@
 import { ACCEPTED_IMAGE_TYPES, MAX_FILE_SIZE } from "@/consts/imageFile.consts"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { FieldValues, Path, UseFormClearErrors, UseFormSetError } from "react-hook-form"
 
 export const useFormImageUpload = <T extends FieldValues> (
@@ -10,13 +10,28 @@ export const useFormImageUpload = <T extends FieldValues> (
   imageUrl: string | File | undefined
 ) => {
     const [image, setImage] = useState<Blob>()
-    const [imagePreview, setImagePreview] = useState<string | File | undefined>(imageUrl)
+    const [imagePreview, setImagePreview] = useState<string | File | undefined>(typeof imageUrl === 'string' ? imageUrl : imageUrl)
     const [dragActive, setDragActive] = useState(false)
+
+    useEffect(() => {
+      if (typeof imageUrl === 'string' && imageUrl) {
+        setImagePreview(imageUrl)
+      } else if (imageUrl instanceof File) {
+        setImagePreview(imageUrl)
+      } else {
+        setImagePreview(undefined)
+      }
+    }, [imageUrl])
 
     const uploadToImgBB = async (imageName: string): Promise<string | null> => {
       const API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY
 
-      if (image === undefined) return null
+      if (image === undefined) {
+        if (typeof imageUrl === 'string' && imageUrl) {
+          return imageUrl
+        }
+        return null
+      }
       if (!API_KEY) throw new Error("API Key de imgBB no configurada")
       if (!(image instanceof Blob)) throw new Error("Error: Blob.")
         

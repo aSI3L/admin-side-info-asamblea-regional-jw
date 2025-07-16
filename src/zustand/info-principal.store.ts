@@ -5,7 +5,7 @@ import { create } from "zustand";
 interface InfoPrincipalStore {
     infoPrincipal: InfoPrincipalType
     getInfoPrincipal: () => Promise<void>
-    createInfoPrincipal: (data: InfoPrincipalType) => Promise<void>
+    createInfoPrincipal: (id: string, data: InfoPrincipalType) => Promise<void>
     loadingInfoPrincipal: boolean
 }
 
@@ -31,11 +31,11 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
             console.log("Error: Get Info Principal")
         }
     },
-    createInfoPrincipal: async (data) => {
-        const newInfoPrincipal = await infoPrincipalService.create(data)
+    createInfoPrincipal: async (id, data) => {
+        const updated = await infoPrincipalService.update(id, data)
 
-        if(newInfoPrincipal) {
-            set(() => ({ infoPrincipal: newInfoPrincipal }))
+        if(updated) {
+            set(() => ({ infoPrincipal: { ...data, id } }))
         } else {
             console.log("Error: Create Info Principal")
         }

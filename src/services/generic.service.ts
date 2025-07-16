@@ -57,15 +57,17 @@ export class GenericService<T extends { id?: string}> {
         }
     }
 
-    async update (id: string, data: T): Promise<void> {
+    async update (id: string, data: T): Promise<boolean> {
         try {
             const docRef = doc(db, this.collectionName, id)
             await setDoc(docRef, data, { merge: true })
+            return true
         } catch (error) {
             if (error instanceof FirebaseError) {
                 const { message, code } = error
                 console.log(message, code)
             }
+            return false
         }
     }
 
