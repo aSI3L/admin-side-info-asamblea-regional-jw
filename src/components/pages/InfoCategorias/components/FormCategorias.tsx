@@ -53,7 +53,7 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
     }
     return (
         <Dialog>
-            <DialogTrigger asChild><Button><Pencil /></Button></DialogTrigger>
+            <DialogTrigger asChild><Button className="cursor-pointer"><Pencil /></Button></DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Editar Categoría</DialogTitle>
@@ -78,7 +78,7 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel htmlFor="description">Nombre de la Categoría</FormLabel>
+                                    <FormLabel htmlFor="description">Descripción de la Categoría</FormLabel>
                                     <FormControl>
                                         <Textarea id="description" placeholder="Escribe una descripción..." className="resize-none" {...field} />
                                     </FormControl>
@@ -153,8 +153,8 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                                             <Image
                                                                 src={typeof imagePreview === "string" ? imagePreview : "/placeholder.svg"}
                                                                 alt="Image Preview"
-                                                                width={1}
-                                                                height={1}
+                                                                width={300}
+                                                                height={300}
                                                                 className="w-full h-48 md:h-64 object-cover"
                                                             />
                                                             <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
@@ -198,7 +198,9 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                 </FormItem>
                             )}
                         />
-                        <Button className="cursor-pointer" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <LoadingSpinner /> : "Submit"}</Button>
+                        <div className="flex justify-end">
+                            <Button className="cursor-pointer" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <LoadingSpinner /> : "Enviar"}</Button>
+                        </div>
                     </form>
                 </Form>
             </DialogContent>
