@@ -1,5 +1,6 @@
 import { infoPrincipalService } from "@/services/index.generic.service";
 import { InfoPrincipalType } from "@/types/info-principal.type";
+import { toast } from "sonner";
 import { create } from "zustand";
 
 interface InfoPrincipalStore {
@@ -36,8 +37,9 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
 
         if(updated) {
             set(() => ({ infoPrincipal: { ...data, id } }))
+            toast.success("Información actualizada correctamente")
         } else {
-            console.log("Error: Create Info Principal")
+            toast.error("Ha ocurrido un error al actualizar la información")
         }
     }
 }))
