@@ -1,9 +1,9 @@
 "use client";
 
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,7 @@ import { CategoriasFormSchemaType, CategoriasType } from "@/types/categorias.typ
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon, Pencil, Upload, X } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
@@ -24,16 +25,17 @@ export const categoriasFormSchema = z.object({
 
 interface FormCategoriasProps {
     categoria: CategoriasType;
-    updateCategoriaAction: (id: string, data: CategoriasType) => Promise<void>
+    updateCategoriaAction: (id: string, data: CategoriasType) => Promise<boolean>
 }
 
 export function FormCategorias({ categoria, updateCategoriaAction }: FormCategoriasProps) {
+    const [open, setOpen] = useState(false)
     const form = useForm<CategoriasFormSchemaType>({
         resolver: zodResolver(categoriasFormSchema),
         defaultValues: {
             name: categoria.name,
             description: categoria.description,
-            imageUrl: categoria.imageUrl ? new File([], categoria.imageUrl) : undefined
+            imageUrl: categoria.imageUrl || undefined
         }
     })
 
@@ -47,13 +49,14 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                 ...data,
                 imageUrl: responseUploadImage
             }
-            console.log(formattedData);
-            await updateCategoriaAction(categoria.id as string, formattedData);
+            const isUpdated = await updateCategoriaAction(categoria.id as string, formattedData);
+            if (isUpdated) { setOpen(false) }
+            else { form.reset({ name: categoria.name, description: categoria.description, imageUrl: categoria.imageUrl || undefined }) } 
         }
     }
     return (
-        <Dialog>
-            <DialogTrigger asChild><Button className="cursor-pointer"><Pencil /></Button></DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button className="cursor-pointer w-full md:w-fit"><Pencil /><span className="md:hidden">Editar</span></Button></DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Editar Categoría</DialogTitle>
@@ -198,8 +201,9 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                 </FormItem>
                             )}
                         />
-                        <div className="flex justify-end">
-                            <Button className="cursor-pointer" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <LoadingSpinner /> : "Enviar"}</Button>
+                        <div className="flex gap-2 justify-end">
+                            <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
+                            <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
                         </div>
                     </form>
                 </Form>

@@ -287,7 +287,7 @@ export function FormInfoPrincipal() {
               { disabled && <Button className="cursor-pointer w-20" onClick={() => setDisabled((prev) => !prev)}>Editar</Button> }
               { !disabled && 
                   <>
-                    <Button className="cursor-pointer w-20" variant="destructive" onClick={() => setDisabled((prev) => !prev)}>Cancelar</Button>
+                    { !form.formState.isSubmitting && <Button className="cursor-pointer w-20" variant="destructive" onClick={() => setDisabled((prev) => !prev)}>Cancelar</Button>}
                     <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : "Enviar"}</Button>
                   </>
               }
