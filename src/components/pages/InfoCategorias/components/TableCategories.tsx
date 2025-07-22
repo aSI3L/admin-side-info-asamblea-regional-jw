@@ -16,33 +16,33 @@ export function TableCategories() {
     return (
         <>
         <div className="hidden md:block w-full">
-        <Table className="w-full">
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-50">Título Categoría</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Acciones</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                { categorias.length > 0 ? categorias.map((cat) => (
-                    <TableRow key={cat.id}>
-                        <TableCell>{cat.name}</TableCell>
-                        <TableCell>{cat.description}</TableCell>
-                        <TableCell><FormCategorias categoria={cat} updateCategoriaAction={updateCategoria} /></TableCell>
-                    </TableRow>
-                )) : (
+            <Table className="w-full">
+                <TableHeader>
                     <TableRow>
-                        <TableCell colSpan={3} className="text-center">No hay categorías disponibles</TableCell>
+                        <TableHead className="w-50">Título Categoría</TableHead>
+                        <TableHead>Descripción</TableHead>
+                        <TableHead>Acciones</TableHead>
                     </TableRow>
-                )}
-            </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                    { categorias.length > 0 ? categorias.map((cat) => (
+                        <TableRow key={cat.id}>
+                            <TableCell>{cat.name}</TableCell>
+                            <TableCell>{cat.description}</TableCell>
+                            <TableCell><FormCategorias categoria={cat} updateCategoriaAction={updateCategoria} /></TableCell>
+                        </TableRow>
+                    )) : (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center">No hay categorías disponibles</TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
         </div>
-        <div className="flex flex-col items-center justify-center gap-2 md:hidden w-full h-full">
+        <div className="flex flex-col items-center gap-2 md:hidden w-full h-full">
         {
             categorias.length > 0 ? categorias.map((cat) => (
-                <Card key={cat.id}>
+                <Card key={cat.id} className="w-full">
                     <CardHeader className="text-center">
                         <CardTitle>{cat.name}</CardTitle>
                         <CardDescription>{cat.description}</CardDescription>
@@ -50,7 +50,7 @@ export function TableCategories() {
                     <CardFooter><FormCategorias categoria={cat} updateCategoriaAction={updateCategoria} /></CardFooter>
                 </Card>
             )) : (
-                <div>No hay categorías disponibles</div>
+                <div className="my-auto">No hay categorías disponibles</div>
             )
         }
         </div>

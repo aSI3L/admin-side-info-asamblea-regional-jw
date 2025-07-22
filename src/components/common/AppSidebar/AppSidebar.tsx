@@ -4,7 +4,6 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarHead
 import { LINKS } from "@/consts/links.consts";
 import Link from "next/link";
 import { InfoCircle } from "./components/InfoCircleFill";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,16 +15,12 @@ export function AppSidebar() {
         <X className="w-4 h-4" />
         <span className="sr-only">Cerrar menú</span>
       </Button>
-      <SidebarHeader className="px-5 pt-5">
+      <SidebarHeader className="px-3 pt-5">
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href="/" className="flex items-center gap-2">
-              <Avatar className="w-6 h-6 md:w-7 md:h-7">
-                <AvatarFallback>
-                  <InfoCircle className="w-full h-full" />
-                </AvatarFallback>
-              </Avatar>
-              <span className="font-bold text-md md:text-lg">Panel de Informes</span>
+              <InfoCircle className="w-6 h-6 md:w-7 md:h-7" />
+              <span className="font-bold text-lg md:text-xl">Panel de Informes</span>
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
