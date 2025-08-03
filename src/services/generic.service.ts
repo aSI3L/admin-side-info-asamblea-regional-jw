@@ -1,6 +1,6 @@
 import { db } from "@/config/firebase"
 import { FirebaseError } from "firebase/app"
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, setDoc } from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore"
 
 type Adapter<T> = (data: any) => T
 
@@ -44,6 +44,23 @@ export class GenericService<T extends { id?: string}> {
         }
     }
 
+    async getByEmail(email: string): Promise<T | null> {
+        const q = query(collection(db, this.collectionName), where("email", "==", email))
+        try {
+            const querySnapshot = await getDocs(q)
+            if (querySnapshot.empty) return null
+            const doc = querySnapshot.docs[0]
+            return this.applyAdapter({ id: doc.id, ...doc.data() })
+        } catch (error) {
+            if (error instanceof FirebaseError) {
+                const { message, code } = error
+                console.log(message, code)
+            }
+            return null
+            
+        }
+    }
+
     async create (data: Omit<T, 'id'>): Promise<T | null> {
         try {
             const docRef = await addDoc(collection(db, this.collectionName), data)
@@ -71,15 +88,17 @@ export class GenericService<T extends { id?: string}> {
         }
     }
 
-    async delete (id: string): Promise<void> {
+    async delete (id: string): Promise<boolean> {
         try {
             const docRef = doc(db, this.collectionName, id)
             await deleteDoc(docRef)
+            return true
         } catch (error) {
             if (error instanceof FirebaseError) {
                 const { message, code } = error
                 console.log(message, code)
             }
+            return false
         }
     }
 }
