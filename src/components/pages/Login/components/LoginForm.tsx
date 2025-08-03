@@ -1,6 +1,5 @@
 "use client"
 
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod/v4"
 import { ErrorLoginAlert } from "./ErrorLoginAlert"
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner"
 
 export const loginFormSchema = z.object({
     email: z.email("Dirección de correo electrónico inválida").min(11, "El correo electrónico es obligatorio"),
@@ -133,7 +133,7 @@ export function LoginForm() {
                         />
                         }
                         <Button className="cursor-pointer w-full" type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting ? <LoadingSpinner/> : loginError?.type === 'needs-password-creation' ? 'Crear Contraseña' : "Iniciar Sesión"}
+                            {form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : loginError?.type === 'needs-password-creation' ? 'Crear Contraseña' : "Iniciar Sesión"}
                         </Button>
                     </form>
                 </Form>

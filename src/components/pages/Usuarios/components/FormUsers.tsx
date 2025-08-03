@@ -1,13 +1,13 @@
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { auth } from "@/config/firebase";
 import { UserType } from "@/types/user.type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
@@ -27,12 +27,14 @@ type UsersFormEmailSchema = z.infer<typeof usersFormEmailSchema>;
 
 interface FormUsersProps {
     usuarioAutorizado?: UserType
-    createUsuarioAutorizadoAction: (email: string, data: UserType) => Promise<void>
-    updateUsuarioAutorizadoAction: (oldEmail: string, data: UserType) => Promise<void>
+    createUsuarioAutorizadoAction: (data: UserType) => Promise<UserType | null>
+    updateUsuarioAutorizadoAction: (id: string, data: UserType) => Promise<boolean>
     isNewUser: boolean
+    cnBtnTrigger?: string
 }
 
-export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, updateUsuarioAutorizadoAction, isNewUser }: FormUsersProps) {
+export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, updateUsuarioAutorizadoAction, isNewUser, cnBtnTrigger }: FormUsersProps) {
+    const [open, setOpen] = useState(false)
     const googleForm = useForm<UsersFormGoogleSchema>({
         resolver: zodResolver(usersFormGoogleSchema),
         defaultValues: {
@@ -50,45 +52,52 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
         }
     })
 
-    const handleCreateOrUpdate = async (updatedUser: UserType) => {
-        if (usuarioAutorizado) {
-            await updateUsuarioAutorizadoAction(usuarioAutorizado.email, updatedUser)
+    const handleCreateOrUpdate = async (user: UserType): Promise<boolean | UserType | null> => {
+        if (!isNewUser) {
+            const isUpdated = await updateUsuarioAutorizadoAction(usuarioAutorizado?.id as string, user)
+            return isUpdated
         } else {
-            await createUsuarioAutorizadoAction(updatedUser.email, updatedUser);
+            const isCreated = await createUsuarioAutorizadoAction(user);
+            return isCreated
         }
     }
 
     const onSubmitGoogle = async (data: UsersFormGoogleSchema) => {
-        const updatedUser: UserType = {
+        const user: UserType = {
             email: data.email,
             provider: "google",
         };
-        await handleCreateOrUpdate(updatedUser)
+        const isUpdatedCreated = await handleCreateOrUpdate(user)
+        if (isUpdatedCreated) { setOpen(false) }
+        googleForm.reset({ email: usuarioAutorizado?.email || "" })
     }
 
     const onSubmitEmail = async (data: UsersFormEmailSchema) => {
-        console.log(auth.currentUser);
-        const updatedUser: UserType = {
+        const user: UserType = {
             email: data.email,
             displayName: `${data.firstName} ${data.lastName}`,
             provider: "email",
             photoURL: data.photoURL,
         };
-        await handleCreateOrUpdate(updatedUser)
+        const isUpdatedCreated = await handleCreateOrUpdate(user)
+        if (isUpdatedCreated) { setOpen(false) }
+        emailForm.reset({email: usuarioAutorizado?.email || "",
+                        firstName: usuarioAutorizado?.displayName?.split(" ")[0] || "",
+                        lastName: usuarioAutorizado?.displayName?.split(" ")[1] || "",
+                        photoURL: usuarioAutorizado?.photoURL || "",})
     }
 
     return (
-        <Dialog>
-            <DialogTrigger asChild><Button>{ isNewUser ? "Agregar Usuario Autorizado" : <Pencil /> }</Button></DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ isNewUser ? "Agregar Usuario Autorizado" : <Pencil /> }</Button></DialogTrigger>
             <DialogContent>
-                <DialogTitle />
                 <Tabs defaultValue={ usuarioAutorizado ? usuarioAutorizado.provider : 'google' } className="w-full">
-                    <TabsList>
+                    { usuarioAutorizado?.provider === undefined && <TabsList>
                         <TabsTrigger value="google">Con Google</TabsTrigger>
                         <TabsTrigger value="email">Con Email</TabsTrigger>
-                    </TabsList>
+                    </TabsList> }
                     <TabsContent value="google">
-                        <DialogHeader className="py-5">
+                        <DialogHeader className={ usuarioAutorizado?.provider === undefined ? "py-5" : "pb-5" }>
                             <DialogTitle>{ isNewUser ? "Agregar mail autorizado de Google" : "Editar mail autorizado de Google"}</DialogTitle>
                         </DialogHeader>
                         <Form {...googleForm}>
@@ -106,12 +115,15 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                         </FormItem>
                                     )}
                                 />
-                                <Button className="cursor-pointer" type="submit" disabled={googleForm.formState.isSubmitting}>{googleForm.formState.isSubmitting ? <LoadingSpinner /> : "Submit"}</Button>
+                                <div className="flex gap-2 justify-end">
+                                    <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
+                                    <Button className="cursor-pointer w-20" type="submit" disabled={googleForm.formState.isSubmitting}>{googleForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                                </div>
                             </form>
                         </Form>
                     </TabsContent>
                     <TabsContent value="email">
-                        <DialogHeader className="py-5">
+                        <DialogHeader className={ usuarioAutorizado?.provider === undefined ? "py-5" : "pb-5" }>
                             <DialogTitle>{ isNewUser ? "Agregar usuario autorizado" : "Editar usuario autorizado"}</DialogTitle>
                         </DialogHeader>
                         <Form {...emailForm}>
@@ -168,7 +180,10 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                         </FormItem>
                                     )}
                                 />
-                                <Button className="cursor-pointer" type="submit" disabled={emailForm.formState.isSubmitting}>{emailForm.formState.isSubmitting ? <LoadingSpinner /> : "Submit"}</Button>
+                                <div className="flex gap-2 justify-end">
+                                    <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
+                                    <Button className="cursor-pointer w-20" type="submit" disabled={emailForm.formState.isSubmitting}>{emailForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                                </div>
                             </form>
                         </Form>
                     </TabsContent>
