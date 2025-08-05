@@ -2,7 +2,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { MapPinned, Trash2 } from "lucide-react";
 import { useEdificios } from "@/hooks/useEdificios";
 import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
 import { FormEdificio } from "./FormEdificio";
@@ -31,7 +31,15 @@ export function TableMaps() {
                 { edificios.length > 0 ? edificios.map((e) => (
                     <TableRow key={e.id}>
                         <TableCell>{e.nombre}</TableCell>
-                        <TableCell className="flex gap-2"><FormEdificio edificio={e} createEdificioAction={createEdificio} updateEdificioAction={updateEdificio} /> <Button className="cursor-pointer" variant="destructive" onClick={() => deleteEdificio(e.id as string)}><Trash2/></Button></TableCell>
+                        <TableCell className="flex gap-2">
+                            <FormEdificio edificio={e} createEdificioAction={createEdificio} updateEdificioAction={updateEdificio} />
+                            <Button className="cursor-pointer" variant="outline">
+                                <MapPinned />
+                            </Button>
+                            <Button className="cursor-pointer" variant="destructive" onClick={() => deleteEdificio(e.id as string)}>
+                                <Trash2/>
+                            </Button>
+                        </TableCell>
                     </TableRow>
                 )) : (
                     <TableRow>
