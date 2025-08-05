@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserType } from "@/types/user.type";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
@@ -68,8 +68,9 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
             provider: "google",
         };
         const isUpdatedCreated = await handleCreateOrUpdate(user)
-        if (isUpdatedCreated) { setOpen(false) }
-        googleForm.reset({ email: usuarioAutorizado?.email || "" })
+        if (isUpdatedCreated) { 
+            setOpen(false)
+        }
     }
 
     const onSubmitEmail = async (data: UsersFormEmailSchema) => {
@@ -80,12 +81,26 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
             photoURL: data.photoURL,
         };
         const isUpdatedCreated = await handleCreateOrUpdate(user)
-        if (isUpdatedCreated) { setOpen(false) }
-        emailForm.reset({email: usuarioAutorizado?.email || "",
-                        firstName: usuarioAutorizado?.displayName?.split(" ")[0] || "",
-                        lastName: usuarioAutorizado?.displayName?.split(" ")[1] || "",
-                        photoURL: usuarioAutorizado?.photoURL || "",})
+        if (isUpdatedCreated) { 
+            setOpen(false)
+        }
     }
+
+    useEffect(() => {
+        if (!open && isNewUser) {
+            googleForm.reset({ email: "" })
+            emailForm.reset({ email: "", firstName: "", lastName: "", photoURL: "" })
+            return
+        }
+        if (usuarioAutorizado?.provider === 'google') {
+            googleForm.reset({ email: usuarioAutorizado.email || "" })
+        } else {
+            emailForm.reset({email: usuarioAutorizado?.email || "",
+                            firstName: usuarioAutorizado?.displayName?.split(" ")[0] || "",
+                            lastName: usuarioAutorizado?.displayName?.split(" ")[1] || "",
+                            photoURL: usuarioAutorizado?.photoURL || "",})
+        }
+    }, [usuarioAutorizado, googleForm, emailForm, open, isNewUser])
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>

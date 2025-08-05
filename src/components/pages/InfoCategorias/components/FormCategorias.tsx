@@ -13,7 +13,7 @@ import { CategoriasFormSchemaType, CategoriasType } from "@/types/categorias.typ
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImageIcon, Pencil, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 
@@ -43,7 +43,6 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
 
     const onSubmit = async (data: CategoriasFormSchemaType) => {
         const responseUploadImage = await uploadToImgBB(`categoria-${data.name}`);
-
         if (responseUploadImage) {
             const formattedData: CategoriasType = {
                 ...data,
@@ -51,9 +50,20 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
             }
             const isUpdated = await updateCategoriaAction(categoria.id as string, formattedData);
             if (isUpdated) { setOpen(false) }
-            else { form.reset({ name: categoria.name, description: categoria.description, imageUrl: categoria.imageUrl || undefined }) } 
         }
     }
+
+    useEffect(() => {
+        if (!open && !categoria) {
+            form.reset({ name: "", description: "", imageUrl: undefined });
+            return;
+        }
+        form.reset({
+            name: categoria.name,
+            description: categoria.description,
+            imageUrl: categoria.imageUrl || undefined
+        });
+    }, [open, categoria, form])
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button className="cursor-pointer w-full md:w-fit"><Pencil /><span className="md:hidden">Editar</span></Button></DialogTrigger>
