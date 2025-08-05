@@ -1,42 +1,41 @@
 "use client";
 
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useUsuariosAutorizados } from "@/hooks/useUsuariosAutorizados";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useEdificios } from "@/hooks/useEdificios";
+import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
+import { FormEdificio } from "./FormEdificio";
 
-export function TableUsers() {
-    const { usuariosAutorizados, loadingUsuarios, createUsuarioAutorizado, updateUsuarioAutorizado, deleteUsuarioAutorizado } = useUsuariosAutorizados()
+export function TableMaps() {
+    const { edificios, loadingEdificios, createEdificio, updateEdificio, deleteEdificio } = useEdificios()
 
-    if (loadingUsuarios) {
-        return <LoadingSpinner />
+    if (loadingEdificios) {
+        return <AdaptableLoadingSpinner />
     }
 
     return (
         <div className="w-full">
         <div className="flex items-center justify-between pb-4">
-            <h2 className="text-2xl font-bold">Usuarios Autorizados</h2>
-            <FormUsers createUsuarioAutorizadoAction={createUsuarioAutorizado} updateUsuarioAutorizadoAction={updateUsuarioAutorizado} isNewUser />
+            <h2 className="text-2xl font-bold">Edificios</h2>
+            <FormEdificio createEdificioAction={createEdificio} updateEdificioAction={updateEdificio} />
         </div>
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead className="w-50">Email</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead className="w-50">Nombre Edificio</TableHead>
                     <TableHead>Acciones</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                { usuariosAutorizados.length > 0 ? usuariosAutorizados.map((user) => (
-                    <TableRow key={user.id}>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.displayName}</TableCell>
-                        <TableCell className="flex gap-2"><FormUsers usuarioAutorizado={user} createUsuarioAutorizadoAction={createUsuarioAutorizado} updateUsuarioAutorizadoAction={updateUsuarioAutorizado} isNewUser={false} /> <Button className="cursor-pointer" variant="destructive" onClick={() => deleteUsuarioAutorizado(user.email)}><Trash2/></Button></TableCell>
+                { edificios.length > 0 ? edificios.map((e) => (
+                    <TableRow key={e.id}>
+                        <TableCell>{e.nombre}</TableCell>
+                        <TableCell className="flex gap-2"><FormEdificio edificio={e} createEdificioAction={createEdificio} updateEdificioAction={updateEdificio} /> <Button className="cursor-pointer" variant="destructive" onClick={() => deleteEdificio(e.id as string)}><Trash2/></Button></TableCell>
                     </TableRow>
                 )) : (
                     <TableRow>
-                        <TableCell colSpan={3} className="text-center">No hay usuarios autorizados disponibles</TableCell>
+                        <TableCell colSpan={3} className="text-center">No hay edificios disponibles</TableCell>
                     </TableRow>
                 )}
             </TableBody>

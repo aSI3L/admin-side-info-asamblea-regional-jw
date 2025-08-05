@@ -37,7 +37,7 @@ export const useUsuariosAutorizadosStore = create<UsuariosAutorizadosStore>((set
         return isCreated
     },
     updateUsuarioAutorizado: async (userId, data) => {
-        const isUpdated = await usuariosAutorizadosService.update(userId, data);
+        const isUpdated = await usuariosAutorizadosService.update(userId, data, true);
         if (isUpdated) {
             set((state) => ({
                 usuariosAutorizados: state.usuariosAutorizados.map(user => user.id === userId ? { ...user, ...data } : user)

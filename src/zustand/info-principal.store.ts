@@ -33,7 +33,7 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
         }
     },
     createInfoPrincipal: async (id, data) => {
-        const updated = await infoPrincipalService.update(id, data)
+        const updated = await infoPrincipalService.update(id, data, true)
 
         if(updated) {
             set(() => ({ infoPrincipal: { ...data, id } }))

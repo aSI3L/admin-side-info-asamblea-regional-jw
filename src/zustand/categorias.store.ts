@@ -23,7 +23,7 @@ export const useCategoriasStore = create<CategoriasStore>((set) => ({
         }
     },
     updateCategoria: async (id, data) => {
-        const updated = await categoriasService.update(id, data)
+        const updated = await categoriasService.update(id, data, true)
 
         if(updated) {
             set((state) => ({
