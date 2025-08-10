@@ -35,7 +35,6 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
     const convertPlanosToArray = (planosObj: Record<string, string> | undefined): { url: string }[] => {
         if (!planosObj) return [{ url: "" }];
         return Object.values(planosObj).map(url => ({ url }));
-        // return planosArray.length > 0 ? planosArray : [""];
     }
 
     const convertArrayToPlanosObject = (planosArray: { url: string }[]): Record<string, string> => {
