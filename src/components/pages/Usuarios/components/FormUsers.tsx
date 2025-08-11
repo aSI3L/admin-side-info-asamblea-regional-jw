@@ -104,7 +104,14 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ isNewUser ? "Agregar Usuario Autorizado" : <Pencil /> }</Button></DialogTrigger>
+            <DialogTrigger asChild>
+                <Button 
+                    className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`}
+                    variant="secondary"
+                >
+                    { isNewUser ? "Agregar Usuario Autorizado" : <Pencil className="h-4 w-4" /> }
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <Tabs defaultValue={ usuarioAutorizado ? usuarioAutorizado.provider : 'google' } className="w-full">
                     { usuarioAutorizado?.provider === undefined && <TabsList>
@@ -124,15 +131,34 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                         <FormItem>
                                             <FormLabel htmlFor="gmail">Gmail</FormLabel>
                                             <FormControl>
-                                                <Input id="gmail" placeholder="ejemplo@gmail.com" {...field} />
+                                                <Input 
+                                                    id="gmail" 
+                                                    placeholder="ejemplo@gmail.com" 
+                                                    className="placeholder:text-white"
+                                                    {...field} 
+                                                />
                                             </FormControl>
                                             {googleForm.formState.errors.email && <FormMessage>{googleForm.formState.errors.email.message}</FormMessage>}
                                         </FormItem>
                                     )}
                                 />
                                 <div className="flex gap-2 justify-end">
-                                    <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
-                                    <Button className="cursor-pointer w-20" type="submit" disabled={googleForm.formState.isSubmitting}>{googleForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                                    <DialogClose asChild>
+                                        <Button 
+                                            className="cursor-pointer" 
+                                            variant="outline"
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </DialogClose>
+                                    <Button 
+                                        className="cursor-pointer w-20 bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm" 
+                                        type="submit" 
+                                        disabled={googleForm.formState.isSubmitting}
+                                        variant="secondary"
+                                    >
+                                        {googleForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Guardar"}
+                                    </Button>
                                 </div>
                             </form>
                         </Form>
@@ -176,7 +202,7 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                         <FormItem>
                                             <FormLabel htmlFor="email">Email</FormLabel>
                                             <FormControl>
-                                                <Input id="email" placeholder="ejemplo@hotmail.com" {...field} />
+                                                <Input id="email" placeholder="ejemplo@hotmail.com" {...field} className="placeholder:text-white" />
                                             </FormControl>
                                             {emailForm.formState.errors.email && <FormMessage>{emailForm.formState.errors.email.message}</FormMessage>}
                                         </FormItem>
@@ -196,8 +222,22 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                     )}
                                 />
                                 <div className="flex gap-2 justify-end">
-                                    <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
-                                    <Button className="cursor-pointer w-20" type="submit" disabled={emailForm.formState.isSubmitting}>{emailForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                                    <DialogClose asChild>
+                                        <Button 
+                                            className="cursor-pointer" 
+                                            variant="outline"
+                                        >
+                                            Cancelar
+                                        </Button>
+                                    </DialogClose>
+                                    <Button 
+                                        className="cursor-pointer w-20 bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm" 
+                                        type="submit" 
+                                        disabled={emailForm.formState.isSubmitting}
+                                        variant="secondary"
+                                    >
+                                        {emailForm.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Guardar"}
+                                    </Button>
                                 </div>
                             </form>
                         </Form>

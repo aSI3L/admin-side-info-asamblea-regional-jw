@@ -36,7 +36,7 @@ export function TableMaps() {
                             <Button className="cursor-pointer" variant="outline">
                                 <MapPinned />
                             </Button>
-                            <Button className="cursor-pointer" variant="destructive" onClick={() => deleteEdificio(e.id as string)}>
+                            <Button className="cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm " variant="secondary" onClick={() => deleteEdificio(e.id as string)}>
                                 <Trash2/>
                             </Button>
                         </TableCell>

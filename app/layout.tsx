@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Roboto } from "next/font/google";
 import "./globals.css";
 import { Auth } from "@/components/common/Auth/Auth";
 
@@ -12,6 +12,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "900"],
+  display: "swap",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,11 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased m-0`}>
-          <Auth>
-            {children}
-          </Auth>
-        </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} antialiased m-0`}>
+        <Auth>
+          {children}
+        </Auth>
+      </body>
     </html>
   );
 }
