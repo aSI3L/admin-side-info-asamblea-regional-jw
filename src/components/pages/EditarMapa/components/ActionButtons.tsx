@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
 import { Ellipsis, Link, MapPinX, Plus, Save, Trash2 } from "lucide-react";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
-import { saveMapGraph } from "@/services/map-graph.service";
+import { saveMapLayer, loadMapLayers } from "@/services/map-graph.service";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConnectStairsModal } from "./ConnectStairsModal";
@@ -88,19 +88,29 @@ export function ActionButtons() {
             alert("Seleccione un edificio y un nivel");
             return;
         }
+        if (!capaActiva) {
+            alert("Debe seleccionar o crear una capa antes de guardar.");
+            return;
+        }
         const nivelId = getLevelIndex();
         if (!nivelId) {
             alert("No se pudo determinar el índice del nivel seleccionado");
             return;
         }
-        await saveMapGraph({
+        // Ensure every POI has the nivel field set
+        const poisWithNivel = pois.map(poi => ({ ...poi, nivel: Number(nivelId) }));
+        await saveMapLayer({
             edificioId: edificio.id,
             nivel: nivelId,
+            capa: capaActiva,
             nodes,
             connections,
-            pois,
+            pois: poisWithNivel,
         });
-    toast.success("Mapa guardado correctamente");
+        toast.success("Capa guardada correctamente en Firestore");
+        // Opcional: recargar capas después de guardar
+        const nuevasCapas = await loadMapLayers({ edificioId: edificio.id, nivel: nivelId });
+        useGrafoMapaStore.getState().setCapasFromFirestore(nuevasCapas);
     };
 
     return (

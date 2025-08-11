@@ -4,7 +4,7 @@ import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
 import { useRef, useEffect, useState } from "react";
 import { RenamePoiModal } from "./RenamePoiModal";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
-import { loadMapGraph } from "@/services/map-graph.service";
+import { loadMapLayers } from "@/services/map-graph.service";
 import Image from "next/image";
 
 export function MapEditor() {
@@ -19,16 +19,19 @@ export function MapEditor() {
         return found ? found[0] : null;
     };
 
+    const setCapasFromFirestore = useGrafoMapaStore(state => state.setCapasFromFirestore);
     useEffect(() => {
         const nivelId = getLevelIndex();
         if (edificio?.id && nivelId) {
-            loadMapGraph({ edificioId: edificio.id, nivel: nivelId }).then(data => {
-                setAll(data);
+            // Cargar todas las capas desde Firestore
+            loadMapLayers({ edificioId: edificio.id, nivel: nivelId }).then(capas => {
+                setCapasFromFirestore(capas);
             });
         } else {
+            setCapasFromFirestore({});
             setAll({ nodes: [], connections: [], pois: [] });
         }
-    }, [edificio?.id, level, setAll]);
+    }, [edificio?.id, level, setAll, setCapasFromFirestore]);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const nodes = useGrafoMapaStore(state => state.nodes);

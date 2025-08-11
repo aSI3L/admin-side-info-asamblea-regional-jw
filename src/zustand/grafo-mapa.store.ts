@@ -18,6 +18,7 @@ interface GrafoMapaStore {
   clearSelection: () => void;
   setAll: (data: { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }) => void;
   setCapaActiva: (capa: string) => void;
+  setCapasFromFirestore: (capas: Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>) => void;
   crearCapa: (nombre: string) => void;
   guardarCapa: () => void;
 }
@@ -91,6 +92,7 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
       pois: nueva.pois,
     });
   },
+  setCapasFromFirestore: (capas) => set({ capas }),
   crearCapa: (nombre: string) => {
     set(state => ({
       capas: {
