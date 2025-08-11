@@ -182,10 +182,10 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                                             <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
                                                                 <Button
                                                                     type="button"
-                                                                    variant="secondary"
                                                                     size="sm"
                                                                     onClick={removeImage}
-                                                                    className="gap-2 h-9 sm:h-10 text-sm cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
+                                                                    className="gap-2 h-9 sm:h-10 text-sm cursor-pointer text-white border-white hover:bg-red-800"
+                                                                    style={{ backgroundColor: '#8e0000' }}
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Eliminar
@@ -195,10 +195,10 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                                             <div className="absolute top-2 right-2 md:hidden">
                                                                 <Button
                                                                     type="button"
-                                                                    variant="secondary"
                                                                     size="sm"
                                                                     onClick={removeImage}
-                                                                    className="h-8 w-8 p-0 rounded-full cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
+                                                                    className="h-8 w-8 p-0 rounded-full cursor-pointer text-white border-white hover:bg-red-800"
+                                                                    style={{ backgroundColor: '#8e0000' }}
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                 </Button>

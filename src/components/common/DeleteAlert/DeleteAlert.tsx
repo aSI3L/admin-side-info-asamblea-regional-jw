@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { OctagonAlert, Trash2 } from "lucide-react";
 
 interface DeleteAlertProps {
@@ -22,7 +22,12 @@ export default function DeleteAlert({ deleteUsuarioAutorizado, userId, cnBtnTrig
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`} variant="secondary"><Trash2/></Button>
+        <Button 
+          className={`cursor-pointer text-white border-white hover:bg-red-800 ${cnBtnTrigger || ""}`} 
+          style={{ backgroundColor: '#8e0000' }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader className="items-center">
@@ -39,7 +44,8 @@ export default function DeleteAlert({ deleteUsuarioAutorizado, userId, cnBtnTrig
         <AlertDialogFooter className="mt-2 sm:justify-center">
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            className={buttonVariants({ variant: "destructive" })}
+            className="bg-red-600 hover:bg-red-700 text-white border-white"
+            style={{ backgroundColor: '#8e0000' }}
             onClick={() => deleteUsuarioAutorizado(userId)}
           >
             Si, eliminar

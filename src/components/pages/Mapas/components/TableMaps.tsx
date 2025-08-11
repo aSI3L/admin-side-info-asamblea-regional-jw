@@ -36,8 +36,12 @@ export function TableMaps() {
                             <Button className="cursor-pointer" variant="outline">
                                 <MapPinned />
                             </Button>
-                            <Button className="cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm " variant="secondary" onClick={() => deleteEdificio(e.id as string)}>
-                                <Trash2/>
+                            <Button 
+                                className="cursor-pointer text-white border-white hover:bg-red-800" 
+                                style={{ backgroundColor: '#8e0000' }}
+                                onClick={() => deleteEdificio(e.id as string)}
+                            >
+                                <Trash2 className="h-4 w-4" />
                             </Button>
                         </TableCell>
                     </TableRow>

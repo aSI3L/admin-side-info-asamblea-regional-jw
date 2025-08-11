@@ -172,10 +172,10 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                                     fields.length > 1 && (
                                                         <Button
                                                             type="button"
-                                                            variant="destructive"
                                                             size="sm"
                                                             onClick={() => removePlano(index)}
-                                                            className="flex items-center gap-2 cursor-pointer"
+                                                            className="flex items-center gap-2 cursor-pointer text-white border-white hover:bg-red-800"
+                                                            style={{ backgroundColor: '#8e0000' }}
                                                         >
                                                             <Trash className="h-4 w-4" />
                                                         </Button>

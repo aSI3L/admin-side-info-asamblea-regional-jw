@@ -6,9 +6,11 @@ import Link from "next/link";
 import { InfoCircle } from "./components/InfoCircleFill";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 
 export function AppSidebar() {
   const { toggleSidebar } = useSidebar()
+  const pathname = usePathname()
   return (
     <Sidebar variant="inset">
       <Button variant="ghost" onClick={toggleSidebar} className="absolute z-1 right-0.5 top-0.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary md:hidden">
@@ -30,16 +32,19 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {
-                LINKS.map((link) => (
-                  <SidebarMenuItem key={link.href}>
-                    <SidebarMenuButton asChild>
-                      <Link href={link.href}>
-                        <link.icon />
-                        <span>{link.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))
+                LINKS.map((link) => {
+                  const isActive = pathname === link.href
+                  return (
+                    <SidebarMenuItem key={link.href}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={link.href}>
+                          <link.icon />
+                          <span>{link.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })
               }
             </SidebarMenu>
           </SidebarGroupContent>

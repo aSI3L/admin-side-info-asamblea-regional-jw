@@ -100,8 +100,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.45 0.13 230);
-    --foreground: oklch(0.90 0.01 240);
+    --background: #005f8e;
+    --foreground: oklch(100% 0.00011 271.152);
   }
 }
 
@@ -114,7 +114,7 @@ body {
 .dark {
   /* Professional Admin Palette - Dark Mode (Sin colores negros/muy oscuros) */
   --background: oklch(0.45 0.13 230);          /* Gris azulado muy suave */
-  --foreground: oklch(0.90 0.01 240);           /* Blanco cálido */
+  --foreground: oklch(94.693% 0.00599 240.363);           /* Blanco cálido */
   
   /* Cards y contenedores */
   --card: oklch(0.16 0.005 240);                /* Gris azulado claro */
