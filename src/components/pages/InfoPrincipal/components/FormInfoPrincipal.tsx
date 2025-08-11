@@ -244,10 +244,10 @@ export function FormInfoPrincipal() {
                               <div className={`${!disabled && "hover:opacity-100"} hidden lg:flex absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200 items-center justify-center`}>
                                 { !disabled && <Button
                                   type="button"
-                                  variant="destructive"
+                                  variant="secondary"
                                   size="sm"
                                   onClick={removeImage}
-                                  className="gap-2 h-9 sm:h-10 text-sm cursor-pointer"
+                                  className="gap-2 h-9 sm:h-10 text-sm cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
                                 >
                                   <X className="h-4 w-4" />
                                   Eliminar
@@ -257,10 +257,10 @@ export function FormInfoPrincipal() {
                               <div className="absolute top-2 right-2 md:hidden">
                                 { !disabled && <Button
                                   type="button"
-                                  variant="destructive"
+                                  variant="secondary"
                                   size="sm"
                                   onClick={removeImage}
-                                  className="h-8 w-8 p-0 rounded-full"
+                                  className="h-8 w-8 p-0 rounded-full cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
                                 >
                                   <X className="h-4 w-4" />
                                 </Button> }
@@ -287,7 +287,7 @@ export function FormInfoPrincipal() {
               { disabled && <Button className="cursor-pointer w-20" onClick={() => setDisabled((prev) => !prev)}>Editar</Button> }
               { !disabled && 
                   <>
-                    { !form.formState.isSubmitting && <Button className="cursor-pointer w-20" variant="destructive" onClick={() => setDisabled((prev) => !prev)}>Cancelar</Button>}
+                    { !form.formState.isSubmitting && <Button className="cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm  w-20" variant="secondary" onClick={() => setDisabled((prev) => !prev)}>Cancelar</Button>}
                     <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : "Enviar"}</Button>
                   </>
               }

@@ -22,7 +22,7 @@ export default function DeleteAlert({ deleteUsuarioAutorizado, userId, cnBtnTrig
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button className={`cursor-pointer ${cnBtnTrigger || ""}`} variant="destructive"><Trash2/></Button>
+        <Button className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`} variant="secondary"><Trash2/></Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader className="items-center">
@@ -32,7 +32,7 @@ export default function DeleteAlert({ deleteUsuarioAutorizado, userId, cnBtnTrig
             </div>
             Está seguro de querer eliminar este item?
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-[15px] text-center">
+          <AlertDialogDescription className="text-[15px] text-center text-white">
             Esta acción no se puede deshacer. Asegúrese de que desea eliminar este item permanentemente.
           </AlertDialogDescription>
         </AlertDialogHeader>

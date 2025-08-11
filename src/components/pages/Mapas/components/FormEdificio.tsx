@@ -102,7 +102,14 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
     
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ !edificio ? "Agregar Edificio" : <Pencil /> }</Button></DialogTrigger>
+            <DialogTrigger asChild>
+                <Button 
+                    className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`}
+                    variant="secondary"
+                >
+                    { !edificio ? "Agregar Edificio" : <Pencil className="h-4 w-4" /> }
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{edificio ? "Editar" : "Nuevo"} Edificio</DialogTitle>
@@ -116,7 +123,12 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                 <FormItem>
                                     <FormLabel htmlFor="name">Nombre del Edificio</FormLabel>
                                     <FormControl>
-                                        <Input id="name" placeholder="Arena Aconcagua" {...field} />
+                                        <Input 
+                                            id="name" 
+                                            placeholder="Arena Aconcagua" 
+                                            className="placeholder:text-white"
+                                            {...field} 
+                                        />
                                     </FormControl>
                                     {form.formState.errors.nombre && <FormMessage>{form.formState.errors.nombre.message}</FormMessage>}
                                 </FormItem>
@@ -152,6 +164,7 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                                     <Input
                                                         id={`planos.${index}.url`}
                                                         placeholder="https://example.com/plano.jpg"
+                                                        className="placeholder:text-white"
                                                         {...planoField}
                                                     />
                                                 </FormControl>
@@ -178,8 +191,22 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                             ))
                         }
                         <div className="flex gap-2 justify-end">
-                            <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
-                            <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                            <DialogClose asChild>
+                                <Button 
+                                    className="cursor-pointer" 
+                                    variant="outline"
+                                >
+                                    Cancelar
+                                </Button>
+                            </DialogClose>
+                            <Button 
+                                className="cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm w-20" 
+                                type="submit" 
+                                disabled={form.formState.isSubmitting}
+                                variant="secondary"
+                            >
+                                {form.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Guardar"}
+                            </Button>
                         </div>
                     </form>
                 </Form>

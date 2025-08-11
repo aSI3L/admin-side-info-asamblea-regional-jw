@@ -66,7 +66,16 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
     }, [open, categoria, form])
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className="cursor-pointer w-full md:w-fit"><Pencil /><span className="md:hidden">Editar</span></Button></DialogTrigger>
+            <DialogTrigger asChild>
+                <Button 
+                    variant="secondary" 
+                    className="cursor-pointer w-full md:w-fit bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm"
+                >
+                    {/* <span className="hidden md:inline">Editar</span> */}
+                    <Pencil className="h-4 w-4" />
+                    <span className="">Editar</span>
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Editar Categoría</DialogTitle>
@@ -173,10 +182,10 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                                             <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 items-center justify-center">
                                                                 <Button
                                                                     type="button"
-                                                                    variant="destructive"
+                                                                    variant="secondary"
                                                                     size="sm"
                                                                     onClick={removeImage}
-                                                                    className="gap-2 h-9 sm:h-10 text-sm cursor-pointer"
+                                                                    className="gap-2 h-9 sm:h-10 text-sm cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Eliminar
@@ -186,10 +195,10 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                                             <div className="absolute top-2 right-2 md:hidden">
                                                                 <Button
                                                                     type="button"
-                                                                    variant="destructive"
+                                                                    variant="secondary"
                                                                     size="sm"
                                                                     onClick={removeImage}
-                                                                    className="h-8 w-8 p-0 rounded-full"
+                                                                    className="h-8 w-8 p-0 rounded-full cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm "
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                 </Button>
@@ -212,8 +221,22 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                             )}
                         />
                         <div className="flex gap-2 justify-end">
-                            <DialogClose asChild><Button className="cursor-pointer" variant="destructive">Cancelar</Button></DialogClose>
-                            <Button className="cursor-pointer w-20" type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Enviar"}</Button>
+                            <DialogClose asChild>
+                                <Button 
+                                    className="cursor-pointer" 
+                                    variant="outline"
+                                >
+                                    Cancelar
+                                </Button>
+                            </DialogClose>
+                            <Button 
+                                className="cursor-pointer w-20 bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm" 
+                                type="submit" 
+                                disabled={form.formState.isSubmitting}
+                                variant="secondary"
+                            >
+                                {form.formState.isSubmitting ? <AdaptableLoadingSpinner /> : "Guardar"}
+                            </Button>
                         </div>
                     </form>
                 </Form>
