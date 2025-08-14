@@ -10,6 +10,8 @@ import Image from "next/image";
 export function MapEditor() {
     const { edificio, level } = useEditMapEdificio();
     const setAll = useGrafoMapaStore(state => state.setAll);
+    const setNivelActivo = useGrafoMapaStore(state => state.setNivelActivo);
+    const nivelActivo = useGrafoMapaStore(state => state.nivelActivo);
     // Cargar grafo al abrir el editor
     // Obtener el índice del nivel seleccionado
     const getLevelIndex = () => {
@@ -23,15 +25,25 @@ export function MapEditor() {
     useEffect(() => {
         const nivelId = getLevelIndex();
         if (edificio?.id && nivelId) {
-            // Cargar todas las capas desde Firestore
+            setNivelActivo(nivelId);
             loadMapLayers({ edificioId: edificio.id, nivel: nivelId }).then(capas => {
-                setCapasFromFirestore(capas);
+                useGrafoMapaStore.getState().setCapasFromFirestore(nivelId, capas);
+                useGrafoMapaStore.getState().setCapaActiva("");
+                const capaNames = Object.keys(capas);
+                if (capaNames.length > 0) {
+                    const nuevaCapa = capaNames[0];
+                    setTimeout(() => {
+                        useGrafoMapaStore.getState().setCapaActiva(nuevaCapa);
+                    }, 0);
+                }
             });
         } else {
-            setCapasFromFirestore({});
+            setNivelActivo("");
+            useGrafoMapaStore.getState().setCapasFromFirestore("", {});
             setAll({ nodes: [], connections: [], pois: [] });
+            useGrafoMapaStore.getState().setCapaActiva("");
         }
-    }, [edificio?.id, level, setAll, setCapasFromFirestore]);
+    }, [edificio?.id, level, setAll, setNivelActivo]);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const nodes = useGrafoMapaStore(state => state.nodes);

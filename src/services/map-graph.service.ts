@@ -1,3 +1,19 @@
+// Guarda el nombre de la capa activa para un nivel
+export async function setActiveLayer({ edificioId, nivel, capaActiva }: { edificioId: string; nivel: string; capaActiva: string }) {
+  const nivelRef = doc(db, "mapas", `${edificioId}_${nivel}`);
+  await setDoc(nivelRef, { capaActiva }, { merge: true });
+}
+
+// Lee el nombre de la capa activa para un nivel
+export async function getActiveLayer({ edificioId, nivel }: { edificioId: string; nivel: string }) {
+  const nivelRef = doc(db, "mapas", `${edificioId}_${nivel}`);
+  const snap = await getDoc(nivelRef);
+  if (snap.exists()) {
+    const data = snap.data();
+    return data.capaActiva || null;
+  }
+  return null;
+}
 
 import { db } from "@/config/firebase";
 import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";

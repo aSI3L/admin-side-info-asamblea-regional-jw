@@ -7,7 +7,8 @@ interface GrafoMapaStore {
   connections: Vector[];
   pois: PointOfInterest[];
   selectedNode: string | null;
-  capas: Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>;
+  capas: Record<string, Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>>; // capas[nivel][capa]
+  nivelActivo: string;
   capaActiva: string;
   addNode: (x: number, y: number) => void;
   connectNodes: (nodeA: string, nodeB: string) => void;
@@ -17,11 +18,13 @@ interface GrafoMapaStore {
   setSelectedNode: (nodeId: string | null) => void;
   clearSelection: () => void;
   setAll: (data: { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }) => void;
+  setNivelActivo: (nivel: string) => void;
   setCapaActiva: (capa: string) => void;
-  setCapasFromFirestore: (capas: Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>) => void;
+  setCapasFromFirestore: (nivel: string, capas: Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>) => void;
   crearCapa: (nombre: string) => void;
   guardarCapa: () => void;
 }
+
 
 
 export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
@@ -29,7 +32,8 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
   connections: [],
   pois: [],
   selectedNode: null,
-  capas: {},
+  capas: {}, // capas[nivel][capa]
+  nivelActivo: "",
   capaActiva: "",
   addNode: (x: number, y: number) => {
     const nodeId = `node_${Date.now()}_${Math.random()}`;
@@ -68,23 +72,31 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
   setSelectedNode: (nodeId: string | null) => set({ selectedNode: nodeId }),
   clearSelection: () => set({ selectedNode: null }),
   setAll: (data: { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }) => set({ nodes: data.nodes, connections: data.connections, pois: data.pois }),
+  setNivelActivo: (nivel: string) => {
+    set({ nivelActivo: nivel, capaActiva: "" });
+    // Limpiar nodos/conexiones/pois al cambiar de nivel
+    set({ nodes: [], connections: [], pois: [] });
+  },
   setCapaActiva: (capa: string) => {
-    const store = get();
+    const { nivelActivo, capas } = get();
     // Guardar la capa actual antes de cambiar
-    if (store.capaActiva) {
+    if (nivelActivo && get().capaActiva) {
       set(state => ({
         capas: {
           ...state.capas,
-          [state.capaActiva]: {
-            nodes: state.nodes,
-            connections: state.connections,
-            pois: state.pois,
+          [nivelActivo]: {
+            ...(state.capas[nivelActivo] || {}),
+            [state.capaActiva]: {
+              nodes: state.nodes,
+              connections: state.connections,
+              pois: state.pois,
+            },
           },
         },
       }));
     }
     // Cargar la nueva capa si existe, si no, inicializar vacía
-    const nueva = get().capas[capa] || { nodes: [], connections: [], pois: [] };
+    const nueva = (capas[nivelActivo] && capas[nivelActivo][capa]) || { nodes: [], connections: [], pois: [] };
     set({
       capaActiva: capa,
       nodes: nueva.nodes,
@@ -92,12 +104,23 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
       pois: nueva.pois,
     });
   },
-  setCapasFromFirestore: (capas) => set({ capas }),
-  crearCapa: (nombre: string) => {
+  setCapasFromFirestore: (nivel, capasNivel) => {
     set(state => ({
       capas: {
         ...state.capas,
-        [nombre]: { nodes: [], connections: [], pois: [] },
+        [nivel]: capasNivel,
+      },
+    }));
+  },
+  crearCapa: (nombre: string) => {
+    const { nivelActivo, capas } = get();
+    set(state => ({
+      capas: {
+        ...state.capas,
+        [nivelActivo]: {
+          ...(capas[nivelActivo] || {}),
+          [nombre]: { nodes: [], connections: [], pois: [] },
+        },
       },
       capaActiva: nombre,
       nodes: [],
@@ -106,13 +129,17 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
     }));
   },
   guardarCapa: () => {
+    const { nivelActivo, capaActiva, nodes, connections, pois, capas } = get();
     set(state => ({
       capas: {
-        ...state.capas,
-        [state.capaActiva]: {
-          nodes: state.nodes,
-          connections: state.connections,
-          pois: state.pois,
+        ...capas,
+        [nivelActivo]: {
+          ...(capas[nivelActivo] || {}),
+          [capaActiva]: {
+            nodes,
+            connections,
+            pois,
+          },
         },
       },
     }));

@@ -5,27 +5,80 @@ import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
 import { Ellipsis, Link, MapPinX, Plus, Save, Trash2 } from "lucide-react";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { saveMapLayer, loadMapLayers } from "@/services/map-graph.service";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Switch } from "@/components/ui/switch";
+import { setActiveLayer, getActiveLayer } from "@/services/map-graph.service";
 import { toast } from "sonner";
 import { ConnectStairsModal } from "./ConnectStairsModal";
+    
 
-export function ActionButtons() {
-    const { edificio, level, setLevel } = useEditMapEdificio()
-    console.log(level);
+    export function ActionButtons() {
+        // Declarar todos los selectores y hooks personalizados al inicio
+        const { edificio, level, setLevel } = useEditMapEdificio();
+        const nivelActivo = useGrafoMapaStore(state => state.nivelActivo);
+        const nodes = useGrafoMapaStore(state => state.nodes);
+        const connections = useGrafoMapaStore(state => state.connections);
+        const pois = useGrafoMapaStore(state => state.pois);
+        const setAll = useGrafoMapaStore(state => state.setAll);
+        const connectNodes = useGrafoMapaStore(state => state.connectNodes);
+        const capas = useGrafoMapaStore(state => state.capas);
+        const crearCapa = useGrafoMapaStore(state => state.crearCapa);
+        const capaActiva = useGrafoMapaStore(state => state.capaActiva);
+        const setCapaActiva = useGrafoMapaStore(state => state.setCapaActiva);
+
+        const [isCapaActiva, setIsCapaActiva] = useState(false);
+
+        // Sincronizar switch con Firestore
+        useEffect(() => {
+            if (!edificio?.id || !nivelActivo || !capaActiva) {
+                setIsCapaActiva(false);
+                return;
+            }
+            getActiveLayer({ edificioId: edificio.id, nivel: nivelActivo }).then(capaFirestore => {
+                setIsCapaActiva(capaFirestore === capaActiva);
+            });
+        }, [edificio?.id, nivelActivo, capaActiva]);
+
+ 
+
+ 
+
     const convertPlanosToArray = (planosObj: Record<string, string> | undefined): { url: string }[] => {
         if (!planosObj) return [{ url: "" }];
         return Object.values(planosObj).map(url => ({ url }));
-    }
+    };
 
-    const nodes = useGrafoMapaStore(state => state.nodes);
-    const connections = useGrafoMapaStore(state => state.connections);
-    const pois = useGrafoMapaStore(state => state.pois);
-    const setAll = useGrafoMapaStore(state => state.setAll);
-    const connectNodes = useGrafoMapaStore(state => state.connectNodes);
-    const capas = useGrafoMapaStore(state => state.capas);
-    const capaActiva = useGrafoMapaStore(state => state.capaActiva);
-    const setCapaActiva = useGrafoMapaStore(state => state.setCapaActiva);
-    const crearCapa = useGrafoMapaStore(state => state.crearCapa);
+
+    useEffect(() => {
+        if (!edificio?.id || !nivelActivo || !capaActiva) {
+            setIsCapaActiva(false);
+            return;
+        }
+        getActiveLayer({ edificioId: edificio.id, nivel: nivelActivo }).then(capaFirestore => {
+            setIsCapaActiva(capaFirestore === capaActiva);
+        });
+    }, [edificio?.id, nivelActivo, capaActiva]);
+
+    const handleSwitchChange = useCallback(async (checked: boolean) => {
+        setIsCapaActiva(checked);
+        if (checked && edificio?.id && nivelActivo && capaActiva) {
+            await setActiveLayer({ edificioId: edificio.id, nivel: nivelActivo, capaActiva });
+            toast.success("Capa marcada como activa para este nivel");
+        }
+    }, [edificio?.id, nivelActivo, capaActiva]);
+
+    // Sincronizar capa activa con el nivel: si la capa activa no existe en el nuevo nivel, setear la primera capa o vacío
+    useEffect(() => {
+        const capasNivel = capas[nivelActivo] || {};
+        const capaNames = Object.keys(capasNivel);
+        if (!capaActiva || !capasNivel[capaActiva]) {
+            if (capaNames.length > 0) {
+                setCapaActiva(capaNames[0]);
+            } else {
+                setCapaActiva("");
+            }
+        }
+    }, [capas, nivelActivo]);
 
     // Modal conectar escaleras
     const [openStairs, setOpenStairs] = useState(false);
@@ -40,10 +93,11 @@ export function ActionButtons() {
     };
     // Acciones de capa
     const handleNuevaCapa = () => {
-        // Generar nombre único
+        // Generar nombre único por nivel
         let idx = 1;
         let nombre = `Capa ${idx}`;
-        while (capas[nombre]) {
+        const capasNivel = capas[nivelActivo] || {};
+        while (capasNivel[nombre]) {
             idx++;
             nombre = `Capa ${idx}`;
         }
@@ -109,8 +163,8 @@ export function ActionButtons() {
         });
         toast.success("Capa guardada correctamente en Firestore");
         // Opcional: recargar capas después de guardar
-        const nuevasCapas = await loadMapLayers({ edificioId: edificio.id, nivel: nivelId });
-        useGrafoMapaStore.getState().setCapasFromFirestore(nuevasCapas);
+    const nuevasCapas = await loadMapLayers({ edificioId: edificio.id, nivel: nivelId });
+    useGrafoMapaStore.getState().setCapasFromFirestore(nivelId, nuevasCapas);
     };
 
     return (
@@ -135,21 +189,30 @@ export function ActionButtons() {
                         </Select>
                     </div>
                     <div className="flex items-center gap-2 flex-1 md:flex-none">
-                        <div className="flex-1 md:w-45">
-                            <Select value={capaActiva} onValueChange={setCapaActiva}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Seleccione una capa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Capas</SelectLabel>
-                                        {Object.keys(capas).map(nombre => (
-                                            <SelectItem key={nombre} value={nombre}>{nombre}</SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                             <div className="flex-1 md:w-45 flex items-center gap-2">
+                                 <Select value={capaActiva} onValueChange={setCapaActiva}>
+                                     <SelectTrigger className="w-full">
+                                         <SelectValue placeholder="Seleccione una capa" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                         <SelectGroup>
+                                             <SelectLabel>Capas</SelectLabel>
+                                             {(Object.keys(capas[nivelActivo] || {})).map(nombre => (
+                                                 <SelectItem key={nombre} value={nombre}>{nombre}</SelectItem>
+                                             ))}
+                                         </SelectGroup>
+                                     </SelectContent>
+                                 </Select>
+                             </div>
+                             <div className="flex items-center gap-2 ml-2">
+                                 <Switch
+                                     checked={isCapaActiva}
+                                     onCheckedChange={handleSwitchChange}
+                                     id="switch-capa-activa"
+                                     className="h-6 w-11"
+                                 />
+                                 <label htmlFor="switch-capa-activa" className="text-sm select-none cursor-pointer whitespace-nowrap" style={{lineHeight: '1'}}>Capa activa</label>
+                             </div>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
