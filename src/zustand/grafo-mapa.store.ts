@@ -105,12 +105,31 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
     });
   },
   setCapasFromFirestore: (nivel, capasNivel) => {
-    set(state => ({
-      capas: {
+    set(state => {
+      // Actualizar las capas
+      const nuevasCapas = {
         ...state.capas,
         [nivel]: capasNivel,
-      },
-    }));
+      };
+      // Verificar si la capa activa sigue existiendo
+      const capaActivaActual = state.capaActiva;
+      const existeCapaActiva = nuevasCapas[nivel] && nuevasCapas[nivel][capaActivaActual];
+      let nuevaCapaActiva = capaActivaActual;
+      if (!existeCapaActiva) {
+        // Elegir la primera capa disponible o vacío
+        const keys = Object.keys(nuevasCapas[nivel] || {});
+        nuevaCapaActiva = keys.length > 0 ? keys[0] : "";
+      }
+      // Cargar datos de la nueva capa activa
+      const datos = (nuevasCapas[nivel] && nuevasCapas[nivel][nuevaCapaActiva]) || { nodes: [], connections: [], pois: [] };
+      return {
+        capas: nuevasCapas,
+        capaActiva: nuevaCapaActiva,
+        nodes: datos.nodes,
+        connections: datos.connections,
+        pois: datos.pois,
+      };
+    });
   },
   crearCapa: (nombre: string) => {
     const { nivelActivo, capas } = get();

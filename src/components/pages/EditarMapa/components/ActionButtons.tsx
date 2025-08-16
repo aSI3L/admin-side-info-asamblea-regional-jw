@@ -7,6 +7,7 @@ import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { saveMapLayer, loadMapLayers } from "@/services/map-graph.service";
 import { useState, useEffect, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { setActiveLayer, getActiveLayer } from "@/services/map-graph.service";
 import { toast } from "sonner";
 import { ConnectStairsModal } from "./ConnectStairsModal";
@@ -109,10 +110,25 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
         setAll({ nodes: [], connections: [], pois: [] });
     };
 
-    const handleEliminarCapa = () => {
-        if (!capaActiva) return;
-        const nuevasCapas = { ...capas };
-        delete nuevasCapas[capaActiva];
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const handleEliminarCapa = async () => {
+        if (!capaActiva || !nivelActivo || !capas[nivelActivo]) return;
+        // Eliminar de Firestore
+        try {
+            const { doc, deleteDoc } = await import("firebase/firestore");
+            const { db } = await import("@/config/firebase");
+            const capaRef = doc(db, "mapas", `${edificio?.id}_${nivelActivo}`, "capas", capaActiva);
+            await deleteDoc(capaRef);
+        } catch (e) { /* Si falla, solo borra local */ }
+
+        // Recargar capas desde Firestore y actualizar el store inmediatamente
+        if (!edificio?.id) {
+            throw new Error("edificio.id is undefined");
+        }
+        const nuevasCapas = await loadMapLayers({ edificioId: edificio.id, nivel: nivelActivo });
+        if (useGrafoMapaStore.getState().setCapasFromFirestore) {
+            useGrafoMapaStore.getState().setCapasFromFirestore(nivelActivo, nuevasCapas);
+        }
         // Elegir otra capa si existe
         const keys = Object.keys(nuevasCapas);
         if (keys.length > 0) {
@@ -121,9 +137,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
             setAll({ nodes: [], connections: [], pois: [] });
             setCapaActiva("");
         }
-        // Actualizar el store manualmente
-        // (No hay método en el store, así que forzamos con setAll y setCapaActiva)
-        // Si quieres persistir capas, deberías agregar un método en el store
+        setOpenDeleteDialog(false);
     };
 
     // Conectar escaleras (ejemplo: solo muestra alerta, implementar lógica real según tu modelo)
@@ -181,7 +195,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
                                     <SelectLabel>Niveles</SelectLabel>
                                     {
                                         convertPlanosToArray(edificio?.planos).map((plano, index) => (
-                                            <SelectItem key={plano.url} value={plano.url}>{`Nivel ${index}`}</SelectItem>
+                                            <SelectItem key={plano.url} value={plano.url}>Nivel {index}</SelectItem>
                                         ))
                                     }
                                 </SelectGroup>
@@ -189,51 +203,65 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
                         </Select>
                     </div>
                     <div className="flex items-center gap-2 flex-1 md:flex-none">
-                             <div className="flex-1 md:w-45 flex items-center gap-2">
-                                 <Select value={capaActiva} onValueChange={setCapaActiva}>
-                                     <SelectTrigger className="w-full">
-                                         <SelectValue placeholder="Seleccione una capa" />
-                                     </SelectTrigger>
-                                     <SelectContent>
-                                         <SelectGroup>
-                                             <SelectLabel>Capas</SelectLabel>
-                                             {(Object.keys(capas[nivelActivo] || {})).map(nombre => (
-                                                 <SelectItem key={nombre} value={nombre}>{nombre}</SelectItem>
-                                             ))}
-                                         </SelectGroup>
-                                     </SelectContent>
-                                 </Select>
-                             </div>
-                             <div className="flex items-center gap-2 ml-2">
-                                 <Switch
-                                     checked={isCapaActiva}
-                                     onCheckedChange={handleSwitchChange}
-                                     id="switch-capa-activa"
-                                     className="h-6 w-11"
-                                 />
-                                 <label htmlFor="switch-capa-activa" className="text-sm select-none cursor-pointer whitespace-nowrap" style={{lineHeight: '1'}}>Capa activa</label>
-                             </div>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button className="shrink-0" size="icon"><Ellipsis/></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuLabel>Acciones de capa</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={handleNuevaCapa}><Plus/>Nueva capa</DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleLimpiarCapa}><MapPinX/>Limpiar capa</DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleEliminarCapa}><Trash2/>Eliminar Capa</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex-1 md:w-45 flex items-center gap-2">
+                            <Select value={capaActiva} onValueChange={setCapaActiva}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Seleccione una capa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Capas</SelectLabel>
+                                        {(Object.keys(capas[nivelActivo] || {})).map(nombre => (
+                                            <SelectItem key={nombre} value={nombre}>{nombre}</SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                            <Switch
+                                checked={isCapaActiva}
+                                onCheckedChange={handleSwitchChange}
+                                className="h-6 w-11"
+                            />
+                            <label htmlFor="switch-capa-activa" className="text-sm select-none cursor-pointer whitespace-nowrap" style={{lineHeight: '1'}}>Capa activa</label>
+                        </div>
+                        <div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button className="shrink-0" size="icon"><Ellipsis/></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuLabel>Acciones de capa</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={handleNuevaCapa}><Plus/>Nueva capa</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={handleLimpiarCapa}><MapPinX/>Limpiar capa</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setOpenDeleteDialog(true)}><Trash2/>Eliminar Capa</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>¿Eliminar capa?</DialogTitle>
+                                        <DialogDescription>
+                                            ¿Estás seguro que deseas eliminar la capa <b>{capaActiva}</b>? Esta acción no se puede deshacer.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
+                                        <Button variant="destructive" onClick={handleEliminarCapa}>Eliminar</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     </div>
-                </div>
 
                 <div className="flex gap-2 w-full md:w-auto">
                     <Button className="flex-1 md:flex-none" onClick={handleSave}><Save/>Guardar</Button>
                     <Button className="flex-1 md:flex-none" onClick={() => setOpenStairs(true)}><Link/>Conectar escaleras</Button>
                     <ConnectStairsModal open={openStairs} onOpenChange={setOpenStairs} onConnect={handleConnectStairs} />
+                    </div>
                 </div>
             </div>
         </div>
-    )
+    );
 }
