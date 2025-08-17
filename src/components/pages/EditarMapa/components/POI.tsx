@@ -2,8 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin } from "lucide-react";
+import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 
 export function POI() {
+    const pois = useGrafoMapaStore(state => state.pois);
     return (
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="-mb-3">
@@ -12,51 +14,19 @@ export function POI() {
             <CardContent>
                 <ScrollArea className="h-64 rounded-md border p-4">
                     <ul className="flex flex-col gap-1">
-                        <li>
-                            <Badge className="text-sm">Primeros Auxilios</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Acomodadores</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
-                        <li>
-                            <Badge className="text-sm">Guardarropas</Badge>
-                        </li>
+                        {pois.length === 0 && (
+                            <li>
+                                <Badge className="text-sm">Sin puntos de interés</Badge>
+                            </li>
+                        )}
+                        {pois.map((poi) => (
+                            <li key={poi.node}>
+                                <Badge className="text-sm">{poi.name}</Badge>
+                            </li>
+                        ))}
                     </ul>
                 </ScrollArea>
             </CardContent>
         </Card>
-    )
+    );
 }
