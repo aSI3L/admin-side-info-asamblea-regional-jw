@@ -68,6 +68,26 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
         }
     }
 
+
+    // Crea una capa inicial "Capa 1" vacía para cada nivel/plano
+    const createInitialLayerForEachLevel = async (edificioId: string, planos: Record<string, string>) => {
+        const { saveMapLayer, setActiveLayer } = await import("@/services/map-graph.service");
+        const planoKeys = Object.keys(planos);
+        for (const nivel of planoKeys) {
+            // Crea la capa vacía
+            await saveMapLayer({
+                edificioId,
+                nivel,
+                capa: "Capa 1",
+                nodes: [],
+                connections: [],
+                pois: []
+            });
+            // Marca como activa
+            await setActiveLayer({ edificioId, nivel, capaActiva: "Capa 1" });
+        }
+    };
+
     const handleCreateOrUpdate = async (edf: Building): Promise<boolean | Building | null> => {
         if (edificio) {
             console.log("Actualizando edificio:", edf);
@@ -75,23 +95,41 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
             return isUpdated
         } else {
             const isCreated = await createEdificioAction(edf);
+            // Si se creó correctamente, crear las capas iniciales
+            if (isCreated && typeof isCreated === 'object' && isCreated.id) {
+                await createInitialLayerForEachLevel(isCreated.id, isCreated.planos);
+            }
             return isCreated
         }
     }
 
+
+    // Convierte enlaces de Google Drive a directos
+    const toDirectGoogleDriveUrl = (url: string) => {
+        const match = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\//);
+        if (match && match[1]) {
+            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
+        return url;
+    };
+
     const onSubmit = async (data: EdificioFormSchema) => {
-        const planosObj = convertArrayToPlanosObject(data.planos);
+        // Mapear todos los planos y convertir si es Google Drive
+        const planosConvertidos = data.planos.map(plano => ({
+            url: toDirectGoogleDriveUrl(plano.url)
+        }));
+        const planosObj = convertArrayToPlanosObject(planosConvertidos);
         const edificioData: Building = {
             nombre: data.nombre,
             planos: planosObj
-        }
+        };
 
-        const response = await handleCreateOrUpdate(edificioData)
+        const response = await handleCreateOrUpdate(edificioData);
 
         if (response) {
-            setOpen(false)
+            setOpen(false);
         }
-    }
+    };
 
     useEffect(() => {
         if (!open && !edificio) {
@@ -102,14 +140,7 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
     
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button 
-                    className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`}
-                    variant="secondary"
-                >
-                    { !edificio ? "Agregar Edificio" : <Pencil className="h-4 w-4" /> }
-                </Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ !edificio ? "Agregar Edificio" : <Pencil /> }</Button></DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{edificio ? "Editar" : "Nuevo"} Edificio</DialogTitle>
@@ -123,12 +154,7 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                 <FormItem>
                                     <FormLabel htmlFor="name">Nombre del Edificio</FormLabel>
                                     <FormControl>
-                                        <Input 
-                                            id="name" 
-                                            placeholder="Arena Aconcagua" 
-                                            className="placeholder:text-white"
-                                            {...field} 
-                                        />
+                                        <Input id="name" placeholder="Arena Aconcagua" {...field} />
                                     </FormControl>
                                     {form.formState.errors.nombre && <FormMessage>{form.formState.errors.nombre.message}</FormMessage>}
                                 </FormItem>

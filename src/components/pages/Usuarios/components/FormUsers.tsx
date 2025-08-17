@@ -104,14 +104,7 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button 
-                    className={`cursor-pointer bg-white hover:bg-secondary/80 text-primary border border-border shadow-sm ${cnBtnTrigger || ""}`}
-                    variant="secondary"
-                >
-                    { isNewUser ? "Agregar Usuario Autorizado" : <Pencil className="h-4 w-4" /> }
-                </Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ isNewUser ? "Agregar Usuario Autorizado" : <Pencil /> }</Button></DialogTrigger>
             <DialogContent>
                 <Tabs defaultValue={ usuarioAutorizado ? usuarioAutorizado.provider : 'google' } className="w-full">
                     { usuarioAutorizado?.provider === undefined && <TabsList>
