@@ -15,6 +15,8 @@ import { useFormImageUpload } from "@/hooks/useFormImageUpload";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AdaptableLoadingSpinner } from "@/components/common/LoadingSpinner/AdaptableLoadingSpinner";
+import { useEdificios } from "@/hooks/useEdificios";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const infoPrincipalFormSchema = z.object({
   mainTitle: z.string().min(1, "El título principal es obligatorio"),
@@ -24,11 +26,13 @@ export const infoPrincipalFormSchema = z.object({
     secondary: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Formato hexadecimal no válido"),
     accent: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Formato hexadecimal no válido"),
   }),
+  buildingId: z.string("Seleccione un edificio"),
   imageUrl: z.instanceof(File).or(z.url()).optional()
 });
 
 export function FormInfoPrincipal() {
   const { infoPrincipal, createInfoPrincipal, loadingInfoPrincipal } = useInfoPrincipal()
+  const { edificios, loadingEdificios } = useEdificios()
   const [disabled, setDisabled] = useState(infoPrincipal ? true : false)
 
   const form = useForm<InfoPrincipalSchemaType>({
@@ -41,6 +45,7 @@ export function FormInfoPrincipal() {
         secondary: infoPrincipal.color.secondary,
         accent: infoPrincipal.color.accent,
       },
+      buildingId: infoPrincipal.buildingId || "",
       imageUrl: infoPrincipal.imageUrl || undefined
     },
     disabled: disabled
@@ -91,7 +96,7 @@ export function FormInfoPrincipal() {
     }
   }, [infoPrincipal, form]);
 
-  if (loadingInfoPrincipal) return <AdaptableLoadingSpinner />
+  if (loadingInfoPrincipal || loadingEdificios) return <AdaptableLoadingSpinner />
 
   return (
     <Card className="max-w-2xl w-full px-0 py-6 md:py-4 overflow-hidden">
@@ -164,6 +169,30 @@ export function FormInfoPrincipal() {
                     <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#FFF000" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.accent ? <FormMessage>{form.formState.errors.color.accent.message}</FormMessage> : <FormDescription>Aplicado a botones o elementos que resalten</FormDescription>}
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="buildingId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Edificio</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={disabled}>
+                    <FormControl>
+                      <SelectTrigger className={`${disabled && 'bg-gray-200'}`}>
+                        <SelectValue placeholder="Seleccione un edificio" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {
+                        edificios.map((edf) => (
+                          <SelectItem key={edf.id} value={edf.id as string}>{edf.nombre}</SelectItem>
+                        ))
+                      }
+                    </SelectContent>
+                  </Select>
+                  { form.formState.errors.buildingId && <FormMessage>{form.formState.errors.buildingId.message}</FormMessage> }
                 </FormItem>
               )}
             />

@@ -5,5 +5,6 @@ export const infoPrincipalAdapter = (infoPrincipal: any): InfoPrincipalType => (
     mainTitle: infoPrincipal.mainTitle,
     year: infoPrincipal.year,
     color: infoPrincipal.color,
+    buildingId: infoPrincipal.buildingId,
     imageUrl: infoPrincipal.imageUrl
 })
