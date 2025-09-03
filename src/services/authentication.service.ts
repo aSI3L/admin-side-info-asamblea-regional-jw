@@ -98,7 +98,7 @@ export const loginWithGoogle = async (): Promise<LoginWithEmailResult> => {
                 displayName: user.displayName || "",
                 photoURL: user.photoURL || ""
             };
-            await usuariosAutorizadosService.update(authorizedUser.id as string, updatedUser);
+            await usuariosAutorizadosService.update(authorizedUser.id as string, updatedUser, true);
             return { status: "success", user: updatedUser }
         }
 
