@@ -178,7 +178,7 @@ export function FormInfoPrincipal() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Edificio</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={disabled}>
+                  <Select onValueChange={field.onChange} defaultValue={infoPrincipal.buildingId ? infoPrincipal.buildingId : ""} disabled={disabled}>
                     <FormControl>
                       <SelectTrigger className={`${disabled && 'bg-gray-200'}`}>
                         <SelectValue placeholder="Seleccione un edificio" />

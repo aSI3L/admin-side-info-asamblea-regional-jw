@@ -140,7 +140,7 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
     
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className={`cursor-pointer ${cnBtnTrigger || ""}`}>{ !edificio ? "Agregar Edificio" : <Pencil /> }</Button></DialogTrigger>
+            <DialogTrigger asChild><Button className={`bg-white hover:bg-secondary/80 text-primary cursor-pointer ${cnBtnTrigger || ""}`}>{ !edificio ? "Agregar Edificio" : <Pencil /> }</Button></DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{edificio ? "Editar" : "Nuevo"} Edificio</DialogTitle>
@@ -154,7 +154,7 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                 <FormItem>
                                     <FormLabel htmlFor="name">Nombre del Edificio</FormLabel>
                                     <FormControl>
-                                        <Input id="name" placeholder="Arena Aconcagua" {...field} />
+                                        <Input id="name" placeholder="Arena Aconcagua" className="placeholder:text-white" {...field} />
                                     </FormControl>
                                     {form.formState.errors.nombre && <FormMessage>{form.formState.errors.nombre.message}</FormMessage>}
                                 </FormItem>
@@ -165,10 +165,9 @@ export function FormEdificio({ edificio, createEdificioAction, updateEdificioAct
                                 <FormLabel className="text-base font-medium">Planos</FormLabel>
                                 <Button
                                     type="button"
-                                    variant="ghost"
                                     size="sm"
                                     onClick={addPlano}
-                                    className="flex items-center gap-2 bg-transparent cursor-pointer"
+                                    className="flex items-center gap-2 bg-white hover:bg-secondary/80 text-primary cursor-pointer"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Agregar Plano

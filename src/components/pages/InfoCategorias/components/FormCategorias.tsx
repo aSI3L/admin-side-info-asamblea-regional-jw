@@ -39,7 +39,7 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
         }
     })
 
-    const { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB } = useFormImageUpload<CategoriasFormSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', categoria.imageUrl)
+    const { imagePreview, handleSetImagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB } = useFormImageUpload<CategoriasFormSchemaType>(form.setValue, form.setError, form.clearErrors, 'imageUrl', categoria.imageUrl)
 
     const onSubmit = async (data: CategoriasFormSchemaType) => {
         const responseUploadImage = await uploadToImgBB(`categoria-${data.name}`);
@@ -53,17 +53,24 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
         }
     }
 
+    const handleCancel = () => {
+        handleSetImagePreview()
+    }
+
     useEffect(() => {
         if (!open && !categoria) {
             form.reset({ name: "", description: "", imageUrl: undefined });
             return;
         }
+
         form.reset({
             name: categoria.name,
             description: categoria.description,
             imageUrl: categoria.imageUrl || undefined
         });
+
     }, [open, categoria, form])
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -225,6 +232,7 @@ export function FormCategorias({ categoria, updateCategoriaAction }: FormCategor
                                 <Button 
                                     className="cursor-pointer" 
                                     variant="outline"
+                                    onClick={handleCancel}
                                 >
                                     Cancelar
                                 </Button>

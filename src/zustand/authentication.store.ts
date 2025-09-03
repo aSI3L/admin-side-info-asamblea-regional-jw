@@ -29,7 +29,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         set({ isLoadingAuth: true });
         const result = await loginWithEmail(email, password)
         
-        if (result.status === 'success') set({ authUser: result.user })
+        if (result.status === 'success') set({ authUser: result.user, loginError: null })
         if (result.status === 'not-authorized') set({ loginError: { type: result.status, title: "No autorizado", message: "Su usuario no figura como autorizado. Verifique que haya introducido los datos correctamente o comuníquese con el Departamento de Informes." } })
         if (result.status === 'needs-password-creation') set({ loginError: { type: result.status, title: "Contraseña requerida", message: "Su usuario está autorizado pero se requiere que cree una contraseña para poder continuar.", email: result.email } })
         if (result.status === 'wrong-password') set({ loginError: { type: result.status } })
@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         set({ isLoadingAuth: true })
         const result = await createWithEmail(email, password)
 
-        if (result.status === 'success') set({ authUser: result.user })
+        if (result.status === 'success') set({ authUser: result.user, loginError: null })
         if (result.status === 'not-authorized') set({ loginError: { type: result.status, title: "No autorizado", message: "Su usuario no figura como autorizado. Verifique que haya introducido los datos correctamente o comuníquese con el Departamento de Informes." } })
         if (result.status === 'error') set({ loginError: { type: result.status, title: "Error", message: result.message }})
 
@@ -51,7 +51,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         set({ isLoadingAuth: true });
         const result = await loginWithGoogle()
 
-        if (result.status === 'success') set({ authUser: result.user })
+        if (result.status === 'success') set({ authUser: result.user, loginError: null })
         if (result.status === 'not-authorized') set({ loginError: { type: result.status, title: "No autorizado", message: "Su usuario no figura como autorizado. Verifique que haya introducido los datos correctamente o comuníquese con el Departamento de Informes." } })
         if (result.status === 'error') set({ loginError: { type: result.status, title: "Error", message: result.message }})
 
