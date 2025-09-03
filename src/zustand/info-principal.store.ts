@@ -19,7 +19,8 @@ export const useInfoPrincipalStore = create<InfoPrincipalStore>((set) => ({
             secondary: "",
             accent: ""
         },
-        imageUrl: ""
+        imageUrl: "",
+        buildingId: ""
     },
     loadingInfoPrincipal: false,
     getInfoPrincipal: async () => {
