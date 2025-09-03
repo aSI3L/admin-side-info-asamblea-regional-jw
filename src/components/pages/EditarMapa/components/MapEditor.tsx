@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { RenamePoiModal } from "./RenamePoiModal";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { loadMapLayers } from "@/services/map-graph.service";
@@ -14,12 +14,12 @@ export function MapEditor() {
     const nivelActivo = useGrafoMapaStore(state => state.nivelActivo);
     // Cargar grafo al abrir el editor
     // Obtener el índice del nivel seleccionado
-    const getLevelIndex = () => {
+    const getLevelIndex = useCallback(() => {
         if (!edificio?.planos || !level) return null;
         const entries = Object.entries(edificio.planos);
         const found = entries.find(([idx, url]) => url === level);
         return found ? found[0] : null;
-    };
+    }, [edificio?.planos, level]);
 
     const setCapasFromFirestore = useGrafoMapaStore(state => state.setCapasFromFirestore);
     useEffect(() => {

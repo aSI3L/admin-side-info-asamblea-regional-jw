@@ -28,7 +28,7 @@ export function ConnectStairsModal({ open, onOpenChange, onConnect }: ConnectSta
       const capasDisp: Record<string, string[]> = {};
       const entries = Object.entries(edificio.planos).filter(([nivel]) => typeof nivel === 'string' && nivel !== undefined && nivel !== '');
       for (const [nivel, url] of entries) {
-        const capas = await loadMapLayers({ edificioId: edificio.id, nivel: nivel ?? '' });
+        const capas = await loadMapLayers({ edificioId: edificio.id as string, nivel: nivel ?? '' });
         const capaKeys = Object.keys(capas);
         capasDisp[nivel] = capaKeys;
         // Seleccionar la primera capa por defecto si no hay una seleccionada
@@ -47,7 +47,6 @@ export function ConnectStairsModal({ open, onOpenChange, onConnect }: ConnectSta
       setCapasDisponibles(capasDisp);
     };
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, edificio?.id, edificio?.planos, capasPorNivel]);
 
   const handleCapaChange = (nivel: string, capa: string) => {
