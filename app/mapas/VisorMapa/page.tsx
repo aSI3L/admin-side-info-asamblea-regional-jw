@@ -5,11 +5,6 @@ import { loadMapLayers } from "@/services/map-graph.service";
 import { edificiosService } from "@/services/index.generic.service";
 import { Button } from "@/components/ui/button";
 
-// Puedes cambiar estos valores por los que correspondan a tu base de datos
-const edificioId = "edificio_demo";
-const nivel = "0";
-const capa = "Capa 1";
-
 export default function VisorMapaPage() {
   const [edificios, setEdificios] = useState<{ id: string; nombre: string }[]>([]);
   const [edificioId, setEdificioId] = useState("");
@@ -79,7 +74,7 @@ export default function VisorMapaPage() {
       {showVisor && from && to && (
         <div className="mt-8">
           {/* Ajusta estos valores fijos para que la ruta se alinee con el plano */}
-          <MapVisor edificioId={edificioId} nivel="" capa="Capa 1" from={from} to={to} scale={1} offsetX={0} offsetY={0} />
+          <MapVisor edificioId={edificioId} nivel="" capa="Capa 1" from={from} to={to} />
         </div>
       )}
     </div>
