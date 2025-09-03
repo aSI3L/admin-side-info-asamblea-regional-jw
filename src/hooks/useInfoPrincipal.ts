@@ -9,7 +9,7 @@ export const useInfoPrincipal = () => {
 
     useEffect(() => {
         void getInfoPrincipal()
-    }, [])
+    }, [getInfoPrincipal])
 
     return { infoPrincipal, createInfoPrincipal, loadingInfoPrincipal }
 }

@@ -11,7 +11,7 @@ export const useCategorias = () => {
 
     useEffect(() => {
         void getCategorias();
-    }, []);
+    }, [getCategorias]);
 
     return { categorias, updateCategoria, loadingCategorias };
 }
