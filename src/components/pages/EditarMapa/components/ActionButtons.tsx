@@ -7,7 +7,7 @@ import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { saveMapLayer, loadMapLayers } from "@/services/map-graph.service";
 import { useState, useEffect, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { setActiveLayer, getActiveLayer } from "@/services/map-graph.service";
 import { toast } from "sonner";
 import { ConnectStairsModal } from "./ConnectStairsModal";
@@ -183,8 +183,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
 
     return (
         <div className="w-full">
-            <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="w-full md:w-auto flex flex-col gap-3 md:flex-row md:justify-start md:items-center">
                     <div className="flex-1 md:flex-none md:w-44">
                         <Select value={level} onValueChange={setLevel}>
                             <SelectTrigger className="w-full">
@@ -255,13 +254,12 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
                         </div>
                     </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
-                    <Button className="flex-1 md:flex-none" onClick={handleSave}><Save/>Guardar</Button>
-                    <Button className="flex-1 md:flex-none" onClick={() => setOpenStairs(true)}><Link/>Conectar escaleras</Button>
-                    <ConnectStairsModal open={openStairs} onOpenChange={setOpenStairs} onConnect={handleConnectStairs} />
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <Button className="flex-1 md:flex-none" variant="outline" onClick={() => setOpenStairs(true)}><Link/>Conectar escaleras</Button>
+                        <Button className="flex-1 md:flex-none bg-white hover:bg-secondary/80 text-primary" onClick={handleSave}><Save/>Guardar</Button>
+                        <ConnectStairsModal open={openStairs} onOpenChange={setOpenStairs} onConnect={handleConnectStairs} />
                     </div>
                 </div>
-            </div>
         </div>
     );
 }

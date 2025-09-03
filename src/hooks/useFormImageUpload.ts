@@ -109,8 +109,12 @@ export const useFormImageUpload = <T extends FieldValues> (
         }
     }
 
+    const handleSetImagePreview = () => {
+      setImagePreview(typeof imageUrl === 'string' ? imageUrl : imageUrl)
+    } 
+
     const removeImage = () => {
         handleChangeImage(undefined)
     }
-    return { imagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB }
+    return { imagePreview, handleSetImagePreview, dragActive, handleDrag, handleDrop, removeImage, handleChangeImage, uploadToImgBB }
 }

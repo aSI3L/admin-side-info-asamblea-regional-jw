@@ -37,7 +37,7 @@ export function DropdownAvatar() {
                         </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-medium text-foreground">{authUser?.displayName}</span>
+                        <span className="truncate font-medium text-muted-foreground">{authUser?.displayName}</span>
                         <span className="truncate text-xs text-muted-foreground">{authUser?.email}</span>
                     </div>
                 </div>

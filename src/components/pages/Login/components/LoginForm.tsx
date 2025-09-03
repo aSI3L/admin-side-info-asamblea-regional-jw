@@ -133,7 +133,7 @@ export function LoginForm() {
                         />
                         }
                         <Button className="cursor-pointer w-full" type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : loginError?.type === 'needs-password-creation' ? 'Crear Contraseña' : "Iniciar Sesión"}
+                            {form.formState.isSubmitting ? <AdaptableLoadingSpinner/> : loginError?.type === 'needs-password-creation' ? 'Crear Contraseña e Iniciar Sesión' : "Iniciar Sesión"}
                         </Button>
                     </form>
                 </Form>
