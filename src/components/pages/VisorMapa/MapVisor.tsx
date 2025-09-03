@@ -88,8 +88,10 @@ export function MapVisor({ edificioId, nivel, capa, from, to }: MapVisorProps) {
       setLevelData(dataByLevel);
     }
     fetchAllLevels();
+    const currentAnimRef = animRef.current;
+
     return () => {
-      if (animRef.current) clearInterval(animRef.current);
+      if (currentAnimRef) clearInterval(currentAnimRef);
     };
   }, [edificioId, capa]);
 
@@ -126,8 +128,8 @@ export function MapVisor({ edificioId, nivel, capa, from, to }: MapVisorProps) {
       if (total === 0) return;
       // Avance en píxeles
       const elapsed = (ts - start) / 1000;
-      let distTotal = elapsed * speed;
-      let cycle = Math.floor(distTotal / total);
+      const distTotal = elapsed * speed;
+      const cycle = Math.floor(distTotal / total);
       if (cycle > lastCycle) {
         // Reiniciar el tiempo base para evitar acumulación de error
         start = ts;
@@ -136,18 +138,18 @@ export function MapVisor({ edificioId, nivel, capa, from, to }: MapVisorProps) {
         requestAnimationFrame(step);
         return;
       }
-      let dist = distTotal - (cycle * total);
-      let pos = dist / total;
+      const dist = distTotal - (cycle * total);
+      const pos = dist / total;
       setAnimPos(pos);
       requestAnimationFrame(step);
     }
     const raf = requestAnimationFrame(step);
+    const currentAnimRef = animRef.current; 
     return () => {
       running = false;
-      if (animRef.current) clearInterval(animRef.current);
+      if (currentAnimRef) clearInterval(currentAnimRef);
       cancelAnimationFrame(raf);
     };
-    // eslint-disable-next-line
   }, [path, levelData]);
 
   // Renderizar todos los planos (niveles) y dibujar solo el camino
