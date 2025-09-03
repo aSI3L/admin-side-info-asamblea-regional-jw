@@ -119,7 +119,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
             const { db } = await import("@/config/firebase");
             const capaRef = doc(db, "mapas", `${edificio?.id}_${nivelActivo}`, "capas", capaActiva);
             await deleteDoc(capaRef);
-        } finally (e) { /* Si falla, solo borra local */ }
+        } catch (e) { /* Si falla, solo borra local */ }
 
         // Recargar capas desde Firestore y actualizar el store inmediatamente
         if (!edificio?.id) {
