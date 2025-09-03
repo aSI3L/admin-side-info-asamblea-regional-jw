@@ -43,7 +43,7 @@ export function MapEditor() {
             setAll({ nodes: [], connections: [], pois: [] });
             useGrafoMapaStore.getState().setCapaActiva("");
         }
-    }, [edificio?.id, level, setAll, setNivelActivo]);
+    }, [edificio?.id, level, setAll, setNivelActivo, getLevelIndex]);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const nodes = useGrafoMapaStore(state => state.nodes);

@@ -79,7 +79,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
                 setCapaActiva("");
             }
         }
-    }, [capas, nivelActivo]);
+    }, [capas, nivelActivo, capaActiva, setCapaActiva]);
 
     // Modal conectar escaleras
     const [openStairs, setOpenStairs] = useState(false);
@@ -119,7 +119,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
             const { db } = await import("@/config/firebase");
             const capaRef = doc(db, "mapas", `${edificio?.id}_${nivelActivo}`, "capas", capaActiva);
             await deleteDoc(capaRef);
-        } catch (e) { /* Si falla, solo borra local */ }
+        } finally (e) { /* Si falla, solo borra local */ }
 
         // Recargar capas desde Firestore y actualizar el store inmediatamente
         if (!edificio?.id) {
