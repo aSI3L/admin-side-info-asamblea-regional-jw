@@ -91,6 +91,7 @@ export function FormInfoPrincipal() {
           secondary: infoPrincipal.color.secondary,
           accent: infoPrincipal.color.accent,
         },
+        buildingId: infoPrincipal.buildingId || "",
         imageUrl: infoPrincipal.imageUrl || undefined
       });
     }
