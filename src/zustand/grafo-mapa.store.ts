@@ -11,6 +11,7 @@ interface GrafoMapaStore {
   nivelActivo: string;
   capaActiva: string;
   addNode: (x: number, y: number) => void;
+  moveNode: (nodeId: string, x: number, y: number) => void;
   connectNodes: (nodeA: string, nodeB: string) => void;
   disconnectNodes: (nodeA: string, nodeB: string) => void;
   renameNode: (nodeId: string, name: string) => void;
@@ -38,6 +39,13 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
   addNode: (x: number, y: number) => {
     const nodeId = `node_${Date.now()}_${Math.random()}`;
     set(state => ({ nodes: [...state.nodes, { x, y, node: nodeId }] }));
+  },
+  moveNode: (nodeId: string, x: number, y: number) => {
+    set(state => ({
+      nodes: state.nodes.map(n => n.node === nodeId ? { ...n, x, y } : n),
+      // También actualizar coordenadas del POI si el nodo es un punto de interés
+      pois: state.pois.map(p => p.node === nodeId ? { ...p, x, y } : p),
+    }));
   },
   connectNodes: (nodeA: string, nodeB: string) => {
     if (nodeA === nodeB) return;

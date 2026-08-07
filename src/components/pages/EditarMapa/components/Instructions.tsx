@@ -29,6 +29,14 @@ export function Instructions() {
                     <Badge>5</Badge>
                     <span>Para <b>conectar escaleras</b> presione el botón: Conectar Escaleras.</span>
                 </div>
+                <div className="flex gap-2 items-center">
+                    <Badge>6</Badge>
+                    <span>Mantenga presionado <b>Shift</b> para activar el <b>snap angular a 45°</b> mientras dibuja desde un nodo seleccionado.</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                    <Badge>7</Badge>
+                    <span><b>Arrastre</b> cualquier nodo con el mouse para reubicarlo de forma precisa.</span>
+                </div>
             </CardContent>
         </Card>
     )
