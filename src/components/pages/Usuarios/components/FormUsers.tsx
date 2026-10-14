@@ -127,7 +127,6 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                                 <Input 
                                                     id="gmail" 
                                                     placeholder="ejemplo@gmail.com" 
-                                                    className="placeholder:text-white"
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -195,7 +194,7 @@ export function FormUsers({ usuarioAutorizado, createUsuarioAutorizadoAction, up
                                         <FormItem>
                                             <FormLabel htmlFor="email">Email</FormLabel>
                                             <FormControl>
-                                                <Input id="email" placeholder="ejemplo@hotmail.com" {...field} className="placeholder:text-white" />
+                                                <Input id="email" placeholder="ejemplo@hotmail.com" {...field} />
                                             </FormControl>
                                             {emailForm.formState.errors.email && <FormMessage>{emailForm.formState.errors.email.message}</FormMessage>}
                                         </FormItem>

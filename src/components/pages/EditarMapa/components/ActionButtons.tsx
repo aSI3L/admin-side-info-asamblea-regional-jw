@@ -3,7 +3,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
 import { Ellipsis, Link, MapPinX, Plus, Save, Trash2 } from "lucide-react";
-import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
+import { conDistancias, useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { saveMapLayer, loadMapLayers } from "@/services/map-graph.service";
 import { useState, useEffect, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -44,10 +44,7 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
 
  
 
-    const convertPlanosToArray = (planosObj: Record<string, string> | undefined): { url: string }[] => {
-        if (!planosObj) return [{ url: "" }];
-        return Object.values(planosObj).map(url => ({ url }));
-    };
+    const nivelesOrdenados = Object.keys(edificio?.planos || {}).sort((a, b) => Number(a) - Number(b));
 
 
     useEffect(() => {
@@ -84,13 +81,10 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
     // Modal conectar escaleras
     const [openStairs, setOpenStairs] = useState(false);
 
-    const handleConnectStairs = (ids: string[]) => {
-        // Conectar todos los seleccionados entre sí (combinación de pares)
-        for (let i = 0; i < ids.length; i++) {
-            for (let j = i + 1; j < ids.length; j++) {
-                connectNodes(ids[i], ids[j]);
-            }
-        }
+    const handleConnectStairs = (pares: [string, string][]) => {
+        // El modal ya arma los pares entre niveles distintos; quedan en la capa del nivel que se edita
+        pares.forEach(([a, b]) => connectNodes(a, b));
+        toast.info("Conexión agregada. Tocá Guardar para conservarla.");
     };
     // Acciones de capa
     const handleNuevaCapa = () => {
@@ -143,12 +137,10 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
     // Conectar escaleras (ejemplo: solo muestra alerta, implementar lógica real según tu modelo)
 
 
-    // Obtener el índice del nivel seleccionado
+    // `level` es la clave del nivel en edificio.planos ("0", "1", ...)
     const getLevelIndex = () => {
-        if (!edificio?.planos || !level) return null;
-        const entries = Object.entries(edificio.planos);
-        const found = entries.find(([idx, url]) => url === level);
-        return found ? found[0] : null;
+        if (!edificio?.planos || !level || !(level in edificio.planos)) return null;
+        return level;
     };
 
     const handleSave = async () => {
@@ -172,7 +164,8 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
             nivel: nivelId,
             capa: capaActiva,
             nodes,
-            connections,
+            // Recalcula el largo de los tramos (también corrige capas guardadas con largo fijo)
+            connections: conDistancias(nodes, connections),
             pois: poisWithNivel,
         });
         toast.success("Capa guardada correctamente en Firestore");
@@ -193,8 +186,8 @@ import { ConnectStairsModal } from "./ConnectStairsModal";
                                 <SelectGroup>
                                     <SelectLabel>Niveles</SelectLabel>
                                     {
-                                        convertPlanosToArray(edificio?.planos).map((plano, index) => (
-                                            <SelectItem key={plano.url} value={plano.url}>Nivel {index}</SelectItem>
+                                        nivelesOrdenados.map(nivel => (
+                                            <SelectItem key={nivel} value={nivel}>Nivel {nivel}</SelectItem>
                                         ))
                                     }
                                 </SelectGroup>

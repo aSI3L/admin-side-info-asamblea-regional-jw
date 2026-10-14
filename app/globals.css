@@ -103,6 +103,20 @@
     --background: #005f8e;
     --foreground: oklch(100% 0.00011 271.152);
   }
+
+  /* Sobre las superficies azules, el gris secundario (placeholders, textos de ayuda,
+     flechas de los selectores) pensado para fondo blanco no se lee: se aclara. */
+  [data-slot="sidebar-inset"],
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="sheet-content"] {
+    --muted-foreground: oklch(0.86 0.03 235);
+  }
+
+  /* Las tarjetas siguen siendo blancas: recuperan el gris original */
+  [data-slot="card"] {
+    --muted-foreground: oklch(0.50 0.02 240);
+  }
 }
 
 body {

@@ -30,7 +30,9 @@ export async function saveMapLayer({ edificioId, nivel, capa, nodes, connections
   pois: PointOfInterest[];
 }) {
   const capaRef = doc(db, "mapas", `${edificioId}_${nivel}`, "capas", capa);
-  await setDoc(capaRef, { nodes, connections, pois });
+  // Firestore rechaza campos `undefined` (p. ej. un punto "sin icono"): se quitan antes de guardar
+  const sinUndefined = JSON.parse(JSON.stringify({ nodes, connections, pois }));
+  await setDoc(capaRef, sinUndefined);
 }
 
 

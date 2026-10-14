@@ -115,7 +115,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel htmlFor="mainTitle">Título Principal</FormLabel>
                   <FormControl>
-                    <Input id="mainTitle" className={`${disabled && 'bg-gray-200'}`} placeholder="Adoración Pura" {...field} />
+                    <Input id="mainTitle" className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`} placeholder="Adoración Pura" {...field} />
                   </FormControl>
                   { form.formState.errors.mainTitle && <FormMessage>{form.formState.errors.mainTitle.message}</FormMessage>}
                 </FormItem>
@@ -128,7 +128,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Año de la Asamblea</FormLabel>
                   <FormControl>
-                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="2025" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`} placeholder="2025" {...field}/>
                   </FormControl>
                   { form.formState.errors.year && <FormMessage>{form.formState.errors.year.message}</FormMessage>}
                 </FormItem>
@@ -141,7 +141,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color Primario</FormLabel>
                   <FormControl>
-                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#000000" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`} placeholder="#000000" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.primary ? <FormMessage>{form.formState.errors.color.primary.message}</FormMessage> : <FormDescription>Aplicado al fondo</FormDescription>}
                 </FormItem>
@@ -154,7 +154,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color Secundario</FormLabel>
                   <FormControl>
-                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#FFFFFF" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`} placeholder="#FFFFFF" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.secondary ? <FormMessage>{form.formState.errors.color.secondary.message}</FormMessage> : <FormDescription>Aplicado a textos, sombras, etc.</FormDescription>}
                 </FormItem>
@@ -167,7 +167,7 @@ export function FormInfoPrincipal() {
                 <FormItem>
                   <FormLabel>Color de Acento</FormLabel>
                   <FormControl>
-                    <Input className={`${disabled && 'bg-gray-200'}`} placeholder="#FFF000" {...field}/>
+                    <Input className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`} placeholder="#FFF000" {...field}/>
                   </FormControl>
                   { form.formState.errors.color?.accent ? <FormMessage>{form.formState.errors.color.accent.message}</FormMessage> : <FormDescription>Aplicado a botones o elementos que resalten</FormDescription>}
                 </FormItem>
@@ -181,7 +181,7 @@ export function FormInfoPrincipal() {
                   <FormLabel>Edificio</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={infoPrincipal.buildingId ? infoPrincipal.buildingId : ""} disabled={disabled}>
                     <FormControl>
-                      <SelectTrigger className={`${disabled && 'bg-gray-200'}`}>
+                      <SelectTrigger className={`${disabled && 'bg-gray-200 disabled:opacity-100'}`}>
                         <SelectValue placeholder="Seleccione un edificio" />
                       </SelectTrigger>
                     </FormControl>

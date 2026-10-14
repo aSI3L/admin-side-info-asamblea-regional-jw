@@ -1,6 +1,21 @@
 
 import { create } from "zustand";
-import type { Node, Vector, PointOfInterest } from "@/types/mapas.type";
+import type { Node, Vector, PointOfInterest, Etiqueta } from "@/types/mapas.type";
+
+// Costo de un tramo entre niveles (escalera/ascensor), en las mismas unidades que el lienzo (800x800)
+export const COSTO_CAMBIO_NIVEL = 60;
+
+const largoTramo = (nodes: Node[], origen: string, destino: string) => {
+  const a = nodes.find(n => n.node === origen);
+  const b = nodes.find(n => n.node === destino);
+  // Si un extremo está en otro nivel, es un cambio de nivel
+  if (!a || !b) return COSTO_CAMBIO_NIVEL;
+  return Math.max(1, Math.round(Math.hypot(a.x - b.x, a.y - b.y)));
+};
+
+/** Recalcula el largo de todos los tramos a partir de la posición de los nodos. */
+export const conDistancias = (nodes: Node[], connections: Vector[]): Vector[] =>
+  connections.map(c => ({ ...c, distancia: largoTramo(nodes, c.origen, c.destino) }));
 
 interface GrafoMapaStore {
   nodes: Node[];
@@ -11,6 +26,12 @@ interface GrafoMapaStore {
   nivelActivo: string;
   capaActiva: string;
   addNode: (x: number, y: number) => void;
+  addPoi: (x: number, y: number, icon: string, name: string) => string;
+  updatePoi: (nodeId: string, data: { name: string; icon?: string; etiqueta?: Etiqueta; escala?: number }) => void;
+  updateEtiqueta: (nodeId: string, etiqueta: Etiqueta) => void;
+  /** punto cuyo diálogo de edición hay que abrir (lo pide la lista de puntos o la barra de selección) */
+  poiEnEdicion: string | null;
+  setPoiEnEdicion: (nodeId: string | null) => void;
   moveNode: (nodeId: string, x: number, y: number) => void;
   connectNodes: (nodeA: string, nodeB: string) => void;
   disconnectNodes: (nodeA: string, nodeB: string) => void;
@@ -40,18 +61,48 @@ export const useGrafoMapaStore = create<GrafoMapaStore>((set, get) => ({
     const nodeId = `node_${Date.now()}_${Math.random()}`;
     set(state => ({ nodes: [...state.nodes, { x, y, node: nodeId }] }));
   },
-  moveNode: (nodeId: string, x: number, y: number) => {
+  addPoi: (x: number, y: number, icon: string, name: string) => {
+    const nodeId = `node_${Date.now()}_${Math.random()}`;
     set(state => ({
-      nodes: state.nodes.map(n => n.node === nodeId ? { ...n, x, y } : n),
-      // También actualizar coordenadas del POI si el nodo es un punto de interés
-      pois: state.pois.map(p => p.node === nodeId ? { ...p, x, y } : p),
+      nodes: [...state.nodes, { x, y, node: nodeId }],
+      pois: [...state.pois, { x, y, node: nodeId, name, icon }],
     }));
+    return nodeId;
+  },
+  updatePoi: (nodeId: string, { name, icon, etiqueta, escala }) => {
+    set(state => {
+      if (state.pois.some(poi => poi.node === nodeId)) {
+        return { pois: state.pois.map(poi => poi.node === nodeId ? { ...poi, name, icon, etiqueta: etiqueta ?? poi.etiqueta, escala } : poi) };
+      }
+      const node = state.nodes.find(n => n.node === nodeId);
+      if (!node) return {};
+      return { pois: [...state.pois, { ...node, name, icon, etiqueta, escala }] };
+    });
+  },
+  updateEtiqueta: (nodeId: string, etiqueta: Etiqueta) => {
+    set(state => ({ pois: state.pois.map(poi => poi.node === nodeId ? { ...poi, etiqueta } : poi) }));
+  },
+  poiEnEdicion: null,
+  setPoiEnEdicion: (nodeId: string | null) => set({ poiEnEdicion: nodeId }),
+  moveNode: (nodeId: string, x: number, y: number) => {
+    set(state => {
+      const nodes = state.nodes.map(n => n.node === nodeId ? { ...n, x, y } : n);
+      return {
+        nodes,
+        // Los tramos que tocan el nodo cambian de largo
+        connections: state.connections.map(c => c.origen === nodeId || c.destino === nodeId
+          ? { ...c, distancia: largoTramo(nodes, c.origen, c.destino) }
+          : c),
+        // También actualizar coordenadas del POI si el nodo es un punto de interés
+        pois: state.pois.map(p => p.node === nodeId ? { ...p, x, y } : p),
+      };
+    });
   },
   connectNodes: (nodeA: string, nodeB: string) => {
     if (nodeA === nodeB) return;
     set(state => {
       if (state.connections.some(v => (v.origen === nodeA && v.destino === nodeB) || (v.origen === nodeB && v.destino === nodeA))) return state;
-      return { connections: [...state.connections, { origen: nodeA, destino: nodeB, distancia: 1 }] };
+      return { connections: [...state.connections, { origen: nodeA, destino: nodeB, distancia: largoTramo(state.nodes, nodeA, nodeB) }] };
     });
   },
   disconnectNodes: (nodeA: string, nodeB: string) => {
