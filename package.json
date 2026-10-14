@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "emulators": "npx -y firebase-tools@14.27.0 emulators:start --project demo-asamblea --import ./datos-ejemplo",
+    "emulators:guardar": "npx -y firebase-tools@14.27.0 emulators:export ./datos-ejemplo --project demo-asamblea --force",
+    "seed": "node scripts/seed-emulators.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

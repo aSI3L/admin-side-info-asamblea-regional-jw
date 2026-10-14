@@ -1,16 +1,19 @@
 "use client"
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadMapLayers } from "@/services/map-graph.service";
-import { Button } from "@/components/ui/button";
+import { edificiosService } from "@/services/index.generic.service";
 import type { Node, Vector, PointOfInterest } from "@/types/mapas.type";
+import { ZoomIn, ZoomOut, Maximize, List, X, ArrowUp, ArrowDown } from "lucide-react";
+import { getIcono, iconoUrl, tamanoIconoPunto } from "@/consts/iconos.consts";
+import { etiquetaDe, layoutEtiqueta, svgBaseline, tamanoEtiqueta } from "@/lib/etiquetas";
 
-// Dijkstra implementation
-function dijkstra(
-  nodes: Node[],
-  connections: Vector[],
-  start: string,
-  end: string
-): string[] {
+type DatosNivel = { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] };
+
+/** Un tramo de la ruta dentro de un mismo nivel: se dibuja en su propio croquis */
+type TramoNivel = { nivel: string; nodos: Node[] };
+
+// Dijkstra sobre el grafo de todos los niveles (los cambios de nivel son aristas comunes)
+function dijkstra(nodes: Node[], connections: Vector[], start: string, end: string): string[] {
   const distances: Record<string, number> = {};
   const prev: Record<string, string | null> = {};
   const queue = new Set<string>();
@@ -21,10 +24,9 @@ function dijkstra(
   });
   distances[start] = 0;
   while (queue.size > 0) {
-    const u = Array.from(queue).reduce((min, n) =>
-      distances[n] < distances[min] ? n : min, Array.from(queue)[0]);
+    const u = Array.from(queue).reduce((min, n) => distances[n] < distances[min] ? n : min, Array.from(queue)[0]);
     queue.delete(u);
-    if (u === end) break;
+    if (u === end || distances[u] === Infinity) break;
     connections.filter((c) => c.origen === u || c.destino === u).forEach((c) => {
       const v = c.origen === u ? c.destino : c.origen;
       if (!queue.has(v)) return;
@@ -35,7 +37,6 @@ function dijkstra(
       }
     });
   }
-  // Build path
   const path: string[] = [];
   let u: string | null = end;
   while (u && prev[u]) {
@@ -43,513 +44,432 @@ function dijkstra(
     u = prev[u];
   }
   if (u === start) path.unshift(start);
-  return path;
+  return path.length > 1 || start === end ? path : [];
 }
-
-
 
 interface MapVisorProps {
   edificioId: string;
-  nivel: string;
   capa: string;
   from: string;
   to: string;
   onInstructionsChange?: (instructions: string[]) => void;
-  onActiveNivelChange?: (nivel: string) => void;
 }
 
-import { Compass, ZoomIn, ZoomOut, Maximize } from "lucide-react";
+// Animación de la flecha
+const VELOCIDAD = 180;          // unidades del mapa por segundo
+const PAUSA_CAMBIO_NIVEL = 900; // ms en la escalera antes de seguir en el próximo croquis
+const PAUSA_FINAL = 1500;       // ms en el destino antes de reiniciar
 
-export function MapVisor({ edificioId, nivel: propsNivel, capa, from, to, onInstructionsChange, onActiveNivelChange }: MapVisorProps) {
-  const [allLevels, setAllLevels] = useState<string[]>([]);
-  const [levelData, setLevelData] = useState<Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }>>({});
+const ZOOM = { min: 1, max: 4 };
+const ANCHO_PLANO = 640;        // px de cada croquis con zoom 1 (en pantallas angostas, el ancho disponible)
+
+export function MapVisor({ edificioId, capa, from, to, onInstructionsChange }: MapVisorProps) {
+  const [levelData, setLevelData] = useState<Record<string, DatosNivel>>({});
   const [planos, setPlanos] = useState<Record<string, string>>({});
-  const [path, setPath] = useState<string[]>([]);
-  const [animPos, setAnimPos] = useState(0); // 0 a 1, posición a lo largo del path
-  const animRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Estados de navegación táctil (Zoom & Pan)
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [baseZoom, setBaseZoom] = useState(1); // Zoom inicial calculado para ajustar al contenedor
+  const [escalaIconos, setEscalaIconos] = useState(1);
+  const [cargado, setCargado] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [showReferencias, setShowReferencias] = useState(false);
 
-  // Calcular el zoom inicial para que el mapa (800x800) quepa en el contenedor
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const seccionRefs = useRef<(HTMLElement | null)[]>([]);
+  const flechaRefs = useRef<(SVGGElement | null)[]>([]);
+  const ultimaInteraccion = useRef(0);
+
+  // Cargar planos y la capa de todos los niveles
   useEffect(() => {
-    const calculateBaseZoom = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        const calculated = Math.min(width, height) / 800;
-        setBaseZoom(calculated);
-        setZoom(calculated);
-      }
-    };
-    calculateBaseZoom();
-    window.addEventListener("resize", calculateBaseZoom);
-    return () => window.removeEventListener("resize", calculateBaseZoom);
-  }, []);
-  const [touchStartDist, setTouchStartDist] = useState<number | null>(null);
-
-  // Nivel activo que se muestra actualmente
-  const [activeNivel, setActiveNivel] = useState<string>("");
-
-  // Cargar todos los niveles y sus datos de la capa 1
-  useEffect(() => {
-    async function fetchAllLevels() {
-      const ed = await import("@/services/index.generic.service").then(m => m.edificiosService.getById(edificioId));
-      if (!ed) return;
+    let cancelado = false;
+    setCargado(false);
+    (async () => {
+      const ed = await edificiosService.getById(edificioId);
+      if (!ed || cancelado) return;
       const niveles = Object.keys(ed.planos || {});
-      setAllLevels(niveles);
-      if (niveles.length > 0 && !activeNivel) {
-        setActiveNivel(niveles[0]);
-      }
-      setPlanos(ed.planos || {});
-      const dataByLevel: Record<string, { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] }> = {};
+      const datos: Record<string, DatosNivel> = {};
       for (const n of niveles) {
-        const capasObj = await loadMapLayers({ edificioId, nivel: n });
-        const data = capasObj["Capa 1"];
-        if (data) {
-          dataByLevel[n] = {
-            nodes: data.nodes || [],
-            connections: data.connections || [],
-            pois: data.pois || [],
-          };
-        }
+        const data = (await loadMapLayers({ edificioId, nivel: n }))[capa];
+        if (data) datos[n] = { nodes: data.nodes || [], connections: data.connections || [], pois: data.pois || [] };
       }
-      setLevelData(dataByLevel);
-    }
-    fetchAllLevels();
-    const currentAnimRef = animRef.current;
-
-    return () => {
-      if (currentAnimRef) clearInterval(currentAnimRef);
-    };
+      if (cancelado) return;
+      setPlanos(ed.planos || {});
+      setEscalaIconos(ed.escalaIconos ?? 1);
+      setLevelData(datos);
+      setCargado(true);
+    })();
+    return () => { cancelado = true; };
   }, [edificioId, capa]);
 
-  // Propagar nivel activo al padre
-  useEffect(() => {
-    if (activeNivel && onActiveNivelChange) {
-      onActiveNivelChange(activeNivel);
+  // Índices: nivel y datos de cada nodo
+  const { nivelDeNodo, nodoPorId, poiPorId } = useMemo(() => {
+    const nivelDeNodo: Record<string, string> = {};
+    const nodoPorId: Record<string, Node> = {};
+    const poiPorId: Record<string, PointOfInterest> = {};
+    for (const [nivel, d] of Object.entries(levelData)) {
+      d.nodes.forEach(n => { nivelDeNodo[n.node] = nivel; nodoPorId[n.node] = n; });
+      d.pois.forEach(p => { poiPorId[p.node] = p; });
     }
-  }, [activeNivel, onActiveNivelChange]);
+    return { nivelDeNodo, nodoPorId, poiPorId };
+  }, [levelData]);
 
-  // Calcular el camino entre from y to usando todos los nodos/conexiones de todos los niveles
+  // Ruta y su división en tramos por nivel (en orden: origen arriba, destino abajo)
+  const path = useMemo(() => {
+    if (!cargado || !from || !to) return [];
+    const nodes = Object.values(levelData).flatMap(l => l.nodes);
+    const conns = Object.values(levelData).flatMap(l => l.connections);
+    return dijkstra(nodes, conns, from, to);
+  }, [cargado, levelData, from, to]);
+
+  const tramos = useMemo<TramoNivel[]>(() => {
+    if (!path.length) {
+      // Sin camino: se muestran igual los niveles de origen y destino
+      const niveles = Array.from(new Set([nivelDeNodo[from], nivelDeNodo[to]].filter(Boolean)));
+      return niveles.map(nivel => ({ nivel, nodos: [] }));
+    }
+    const out: TramoNivel[] = [];
+    for (const id of path) {
+      const nivel = nivelDeNodo[id];
+      const nodo = nodoPorId[id];
+      if (!nivel || !nodo) continue;
+      if (out.length && out[out.length - 1].nivel === nivel) out[out.length - 1].nodos.push(nodo);
+      else out.push({ nivel, nodos: [nodo] });
+    }
+    return out;
+  }, [path, nivelDeNodo, nodoPorId, from, to]);
+
+  // Instrucciones paso a paso
   useEffect(() => {
-    const allNodes = Object.values(levelData).flatMap(l => l.nodes);
-    const allConns = Object.values(levelData).flatMap(l => l.connections);
-    if (from && to && allNodes.length && allConns.length) {
-      const p = dijkstra(allNodes, allConns, from, to);
-      setPath(p);
-
-      // Determinar el nivel de inicio y establecerlo como activo
-      let startLvl = activeNivel;
-      for (const [nivelK, dataK] of Object.entries(levelData)) {
-        if (dataK.nodes.some(n => n.node === p[0])) {
-          startLvl = nivelK;
-          break;
+    if (!onInstructionsChange || !cargado) return;
+    if (!path.length) {
+      onInstructionsChange(from && to ? ["No hay un camino cargado que una estos dos puntos."] : []);
+      return;
+    }
+    const pasos: string[] = [`Partida desde: ${poiPorId[from]?.name || "Punto de inicio"}`];
+    tramos.forEach((tramo, i) => {
+      // Lugares con nombre por los que se pasa (sin repetir origen, destino ni escaleras)
+      tramo.nodos.forEach((n, k) => {
+        const poi = poiPorId[n.node];
+        const esCambioDeNivel = (i > 0 && k === 0) || (i < tramos.length - 1 && k === tramo.nodos.length - 1);
+        if (poi && n.node !== from && n.node !== to && !esCambioDeNivel && !getIcono(poi.icon)?.cambioNivel) {
+          pasos.push(`Pasá por: ${poi.name}`);
         }
-      }
-      if (startLvl) {
-        setActiveNivel(startLvl);
-      }
-
-      // Resetear zoom/pan al recalcular
-      setZoom(baseZoom);
-      setPan({ x: 0, y: 0 });
-
-      // Generar instrucciones descriptivas
-      if (onInstructionsChange) {
-        const steps: string[] = [];
-        const poisList = Object.values(levelData).flatMap(l => l.pois);
-        const startPoi = poisList.find(poi => poi.node === from);
-        const endPoi = poisList.find(poi => poi.node === to);
-
-        steps.push(`Partida desde: ${startPoi?.name || "Punto de inicio"}`);
-
-        // Identificar cambios de nivel en la ruta
-        let currentLvl = startLvl;
-        p.forEach((nodeId, idx) => {
-          if (idx === 0) return;
-          // Buscar si hay un cambio de nivel
-          let nodeLvl = currentLvl;
-          for (const [nivelK, dataK] of Object.entries(levelData)) {
-            if (dataK.nodes.some(n => n.node === nodeId)) {
-              nodeLvl = nivelK;
-              break;
-            }
-          }
-          if (nodeLvl !== currentLvl) {
-            steps.push(`Sube/baja al Nivel ${nodeLvl}`);
-            currentLvl = nodeLvl;
-          }
-          // Si pasa por un POI nombrado, mencionarlo
-          const intermediatePoi = poisList.find(poi => poi.node === nodeId && poi.node !== from && poi.node !== to);
-          if (intermediatePoi) {
-            steps.push(`Pasa por: ${intermediatePoi.name}`);
-          }
-        });
-
-        steps.push(`Llegada a: ${endPoi?.name || "Destino"}`);
-        onInstructionsChange(steps);
-      }
-    } else {
-      setPath([]);
-    }
-  }, [from, to, levelData]);
-
-  // Animación de la flecha: recorre toda la ruta suavemente
-  useEffect(() => {
-    if (!path.length) return;
-    setAnimPos(0);
-    let start: number | null = null;
-    let running = true;
-    const speed = 180; // px por segundo
-    let lastCycle = 0;
-    
-    function step(ts: number) {
-      if (!running) return;
-      if (start === null) start = ts;
-      // Calcular longitud total de la ruta
-      const allNodes = Object.values(levelData).flatMap(l => l.nodes);
-      const points = path.map(id => allNodes.find(n => n.node === id)).filter(Boolean) as Node[];
-      let total = 0;
-      const segLengths: number[] = [];
-      for (let i = 0; i < points.length - 1; i++) {
-        const len = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
-        segLengths.push(len);
-        total += len;
-      }
-      if (total === 0) return;
-      
-      // Avance en píxeles
-      const elapsed = (ts - start) / 1000;
-      const distTotal = elapsed * speed;
-      const cycle = Math.floor(distTotal / total);
-      if (cycle > lastCycle) {
-        start = ts;
-        lastCycle = cycle;
-        setAnimPos(0);
-        requestAnimationFrame(step);
-        return;
-      }
-      const dist = distTotal - (cycle * total);
-      const pos = dist / total;
-      setAnimPos(pos);
-
-      // --- CAMBIO AUTOMÁTICO DE PISO ---
-      // Detectar en qué nivel está el punto actual de la animación
-      let curDist = pos * total;
-      let segIdx = 0;
-      while (segIdx < segLengths.length && curDist > segLengths[segIdx]) {
-        curDist -= segLengths[segIdx];
-        segIdx++;
-      }
-      if (segIdx >= segLengths.length) segIdx = segLengths.length - 1;
-      const activeNode = points[segIdx];
-      if (activeNode) {
-        for (const [nivelK, dataK] of Object.entries(levelData)) {
-          if (dataK.nodes.some(n => n.node === activeNode.node)) {
-            if (nivelK !== activeNivel) {
-              setActiveNivel(nivelK);
-            }
-            break;
-          }
-        }
-      }
-      // ---------------------------------
-
-      requestAnimationFrame(step);
-    }
-    const raf = requestAnimationFrame(step);
-    const currentAnimRef = animRef.current; 
-    return () => {
-      running = false;
-      if (currentAnimRef) clearInterval(currentAnimRef);
-      cancelAnimationFrame(raf);
-    };
-  }, [path, levelData, activeNivel]);
-
-  // Controles de zoom manual y restablecer
-  const zoomIn = () => setZoom(prev => Math.min(5, prev * 1.25));
-  const zoomOut = () => setZoom(prev => Math.max(0.5, prev / 1.25));
-  const resetZoom = () => {
-    setZoom(baseZoom);
-    setPan({ x: 0, y: 0 });
-  };
-
-  // Eventos de ratón para arrastre
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  };
-
-  const handleMouseUpOrLeave = () => {
-    setIsDragging(false);
-  };
-
-  // Evento de rueda para zoom
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom(prev => Math.max(0.5, Math.min(5, prev * factor)));
-  };
-
-  // Eventos táctiles para arrastre y pellizco en dispositivos móviles
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
-    } else if (e.touches.length === 2) {
-      setIsDragging(false);
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      setTouchStartDist(dist);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isDragging) {
-      setPan({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y,
       });
-    } else if (e.touches.length === 2 && touchStartDist !== null) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const factor = dist / touchStartDist;
-      setZoom(prev => Math.max(0.5, Math.min(5, prev * factor)));
-      setTouchStartDist(dist);
-    }
-  };
+      const siguiente = tramos[i + 1];
+      if (siguiente) {
+        const escalera = poiPorId[tramo.nodos[tramo.nodos.length - 1].node]?.name || "la escalera";
+        const verbo = Number(siguiente.nivel) > Number(tramo.nivel) ? "subí" : "bajá";
+        pasos.push(`Tomá ${escalera} y ${verbo} al Nivel ${siguiente.nivel}`);
+      }
+    });
+    pasos.push(`Llegada a: ${poiPorId[to]?.name || "Destino"}`);
+    onInstructionsChange(pasos);
+  }, [cargado, path, tramos, poiPorId, from, to, onInstructionsChange]);
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchStartDist(null);
-  };
+  // ── Animación: una línea de tiempo que recorre los tramos en orden ────────
+  useEffect(() => {
+    flechaRefs.current.forEach(g => g?.setAttribute("visibility", "hidden"));
+    if (!path.length) return;
 
-  // Renderizar plano del nivel activo
-  const data = levelData[activeNivel];
-  const planoUrl = planos[activeNivel] || null;
-  const pathSegments = [] as { from: Node; to: Node }[];
-  if (data) {
-    for (let i = 0; i < path.length - 1; i++) {
-      const n1 = data.nodes.find(n => n.node === path[i]);
-      const n2 = data.nodes.find(n => n.node === path[i + 1]);
-      if (n1 && n2) pathSegments.push({ from: n1, to: n2 });
+    type Paso = { tramo: number; a: Node; b: Node; inicio: number; dur: number };
+    const pasos: Paso[] = [];
+    let t = 0;
+    tramos.forEach((tramo, i) => {
+      for (let k = 0; k < tramo.nodos.length - 1; k++) {
+        const a = tramo.nodos[k], b = tramo.nodos[k + 1];
+        const dur = (Math.hypot(b.x - a.x, b.y - a.y) / VELOCIDAD) * 1000;
+        if (dur > 0) { pasos.push({ tramo: i, a, b, inicio: t, dur }); t += dur; }
+      }
+      if (i < tramos.length - 1) t += PAUSA_CAMBIO_NIVEL;
+    });
+    if (!pasos.length) return;
+    const total = t + PAUSA_FINAL;
+
+    let raf = 0;
+    let inicio: number | null = null;
+    let tramoVisible = -1;
+    const frame = (ts: number) => {
+      if (inicio === null) inicio = ts;
+      const ahora = (ts - inicio) % total;
+      // Paso actual (o el último que terminó, durante las pausas)
+      let paso = pasos[0];
+      for (const p of pasos) { if (p.inicio <= ahora) paso = p; else break; }
+      const avance = Math.min(1, Math.max(0, (ahora - paso.inicio) / paso.dur));
+      const x = paso.a.x + (paso.b.x - paso.a.x) * avance;
+      const y = paso.a.y + (paso.b.y - paso.a.y) * avance;
+      const angulo = (Math.atan2(paso.b.y - paso.a.y, paso.b.x - paso.a.x) * 180) / Math.PI;
+
+      flechaRefs.current.forEach((g, i) => {
+        if (!g) return;
+        if (i === paso.tramo) {
+          g.setAttribute("visibility", "visible");
+          g.setAttribute("transform", `translate(${x},${y}) rotate(${angulo})`);
+        } else {
+          g.setAttribute("visibility", "hidden");
+        }
+      });
+
+      // Al pasar a otro croquis, mostrarlo (si la persona no está moviendo el mapa)
+      if (paso.tramo !== tramoVisible) {
+        tramoVisible = paso.tramo;
+        if (Date.now() - ultimaInteraccion.current > 4000) {
+          seccionRefs.current[paso.tramo]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [path, tramos]);
+
+  // ── Zoom: agranda el ancho de los croquis; el desplazamiento es el scroll nativo ──
+  const centroAntesDelZoom = useRef<{ cx: number; cy: number } | null>(null);
+  const cambiarZoom = useCallback((fn: (z: number) => number) => {
+    const el = scrollRef.current;
+    if (el) {
+      centroAntesDelZoom.current = {
+        cx: (el.scrollLeft + el.clientWidth / 2) / el.scrollWidth,
+        cy: (el.scrollTop + el.clientHeight / 2) / el.scrollHeight,
+      };
     }
+    setZoom(z => Math.min(ZOOM.max, Math.max(ZOOM.min, fn(z))));
+  }, []);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const c = centroAntesDelZoom.current;
+    if (!el || !c) return;
+    el.scrollLeft = c.cx * el.scrollWidth - el.clientWidth / 2;
+    el.scrollTop = c.cy * el.scrollHeight - el.clientHeight / 2;
+    centroAntesDelZoom.current = null;
+  }, [zoom]);
+
+  // Pellizco con dos dedos y Ctrl + rueda (listeners no pasivos para poder cancelar el zoom del navegador)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let distInicial: number | null = null;
+    const distancia = (e: TouchEvent) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const marcar = () => { ultimaInteraccion.current = Date.now(); };
+    const onTouchStart = (e: TouchEvent) => { marcar(); if (e.touches.length === 2) distInicial = distancia(e); };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || distInicial === null) return;
+      e.preventDefault();
+      const d = distancia(e);
+      const factor = d / distInicial;
+      distInicial = d;
+      cambiarZoom(z => z * factor);
+    };
+    const onTouchEnd = () => { distInicial = null; };
+    const onWheel = (e: WheelEvent) => {
+      marcar();
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      cambiarZoom(z => z * (e.deltaY < 0 ? 1.1 : 0.9));
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("pointerdown", marcar);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("pointerdown", marcar);
+    };
+  }, [cambiarZoom]);
+
+  // Referencias de los niveles que se muestran
+  const referencias = useMemo(() => {
+    const niveles = Array.from(new Set(tramos.map(t => t.nivel)));
+    return niveles.map(nivel => ({
+      nivel,
+      items: (levelData[nivel]?.pois || [])
+        .filter(p => p.icon)
+        .filter((p, i, arr) => arr.findIndex(o => o.icon === p.icon && o.name === p.name) === i)
+        .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" })),
+    })).filter(r => r.items.length);
+  }, [tramos, levelData]);
+
+  const botonControl = "w-10 h-10 rounded-full bg-zinc-800/90 backdrop-blur-md text-zinc-100 flex items-center justify-center border border-zinc-700 active:scale-95 transition-transform";
+
+  if (!cargado) {
+    return <div className="w-full h-full flex items-center justify-center text-zinc-400">Cargando mapa...</div>;
   }
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-zinc-950 flex items-center justify-center select-none touch-none">
-      {/* Controles de Zoom Flotantes */}
-      <div className="absolute left-4 top-4 flex flex-col gap-2 z-10">
-        <button
-          onClick={zoomIn}
-          className="w-10 h-10 rounded-full bg-zinc-800/80 backdrop-blur-md text-zinc-100 flex items-center justify-center border border-zinc-700 active:scale-95 transition-transform"
-        >
-          <ZoomIn className="w-5 h-5" />
-        </button>
-        <button
-          onClick={zoomOut}
-          className="w-10 h-10 rounded-full bg-zinc-800/80 backdrop-blur-md text-zinc-100 flex items-center justify-center border border-zinc-700 active:scale-95 transition-transform"
-        >
-          <ZoomOut className="w-5 h-5" />
-        </button>
-        <button
-          onClick={resetZoom}
-          className="w-10 h-10 rounded-full bg-zinc-800/80 backdrop-blur-md text-zinc-100 flex items-center justify-center border border-zinc-700 active:scale-95 transition-transform"
-        >
-          <Maximize className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Selector de Pisos Flotante a la Derecha */}
-      <div className="absolute right-4 top-4 flex flex-col gap-2 z-10">
-        {allLevels.map(lvl => (
+    <div className="relative w-full h-full bg-zinc-950 select-none">
+      {/* Controles de zoom y referencias */}
+      <div className="absolute left-3 top-3 z-10 flex flex-col gap-2">
+        <button onClick={() => cambiarZoom(z => z * 1.25)} className={botonControl} aria-label="Acercar"><ZoomIn className="w-5 h-5" /></button>
+        <button onClick={() => cambiarZoom(z => z / 1.25)} className={botonControl} aria-label="Alejar"><ZoomOut className="w-5 h-5" /></button>
+        <button onClick={() => cambiarZoom(() => 1)} className={botonControl} aria-label="Ajustar a la pantalla"><Maximize className="w-5 h-5" /></button>
+        {referencias.length > 0 && (
           <button
-            key={lvl}
-            onClick={() => setActiveNivel(lvl)}
-            className={`w-12 h-12 rounded-full border shadow-lg font-bold flex items-center justify-center active:scale-95 transition-all ${
-              activeNivel === lvl
-                ? "bg-blue-600 text-white border-blue-500 scale-105"
-                : "bg-zinc-800/90 backdrop-blur-md text-zinc-300 border-zinc-700"
-            }`}
+            onClick={() => setShowReferencias(v => !v)}
+            title="Referencias"
+            aria-label="Referencias"
+            className={`${botonControl} ${showReferencias ? "!bg-blue-600 !border-blue-500 text-white" : ""}`}
           >
-            N{lvl}
+            <List className="w-5 h-5" />
           </button>
-        ))}
+        )}
       </div>
 
-      {/* Contenedor del Mapa con Zoom y Pan */}
-      <div
-        ref={containerRef}
-        className="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUpOrLeave}
-        onMouseLeave={handleMouseUpOrLeave}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      {showReferencias && referencias.length > 0 && (
+        <div className="absolute left-16 top-3 z-20 w-60 max-h-[70%] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur-md p-3 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Referencias</span>
+            <button onClick={() => setShowReferencias(false)} className="text-zinc-400 active:scale-95" aria-label="Cerrar referencias">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {referencias.map(r => (
+            <div key={r.nivel} className="mb-2 last:mb-0">
+              {referencias.length > 1 && <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-zinc-400">Nivel {r.nivel}</div>}
+              <ul className="space-y-1.5">
+                {r.items.map(ref => (
+                  <li key={ref.node} className="flex items-center gap-2 text-sm text-zinc-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={iconoUrl(ref.icon as string)} alt="" className="w-6 h-6 shrink-0" />
+                    <span className="leading-tight">{ref.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Croquis de la ruta, uno debajo del otro */}
+      <div ref={scrollRef} className="w-full h-full overflow-auto" style={{ touchAction: "pan-x pan-y" }}>
         <div
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: "center center",
-            transition: isDragging ? "none" : "transform 0.15s ease-out",
-          }}
-          className="w-[800px] h-[800px] shrink-0"
+          className="mx-auto flex flex-col gap-4 px-3 pb-6 pt-3 pl-16"
+          style={{ width: `min(${zoom * 100}%, ${zoom * ANCHO_PLANO + 76}px)` }}
         >
-          {data ? (
-            <svg
-              viewBox="0 0 800 800"
-              width="100%"
-              height="100%"
-              style={{ background: "#18181b", borderRadius: 12, display: "block" }}
-            >
-              <defs>
-                <linearGradient id="gmaps-blue" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#4285F4" />
-                  <stop offset="100%" stopColor="#0a58ca" />
-                </linearGradient>
-                <filter id="gmaps-glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="7" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <filter id="gmaps-arrow-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.4" />
-                </filter>
-                <style>{`
-                  .gmaps-dash {
-                    stroke-dasharray: 16 12;
-                    stroke-dashoffset: 0;
-                    animation: dashmove 1.2s linear infinite;
-                  }
-                  @keyframes dashmove {
-                    to { stroke-dashoffset: -28; }
-                  }
-                `}</style>
-              </defs>
-              {planoUrl && (
-                <image href={planoUrl} x={0} y={0} width={800} height={800} style={{ pointerEvents: "none" }} />
-              )}
-              {pathSegments.map((seg, idx) => (
-                <g key={idx}>
-                  <line
-                    x1={seg.from.x}
-                    y1={seg.from.y}
-                    x2={seg.to.x}
-                    y2={seg.to.y}
-                    stroke="#4285F4"
-                    strokeWidth={12}
-                    opacity={0.5}
-                    filter="url(#gmaps-glow)"
-                  />
-                  <line x1={seg.from.x} y1={seg.from.y} x2={seg.to.x} y2={seg.to.y} stroke="url(#gmaps-blue)" strokeWidth={7} />
-                  <line x1={seg.from.x} y1={seg.from.y} x2={seg.to.x} y2={seg.to.y} stroke="#fff" strokeWidth={3.5} />
-                  <line
-                    x1={seg.from.x}
-                    y1={seg.from.y}
-                    x2={seg.to.x}
-                    y2={seg.to.y}
-                    stroke="#fff"
-                    strokeWidth={2.5}
-                    className="gmaps-dash"
-                    opacity={0.7}
-                  />
-                </g>
-              ))}
-              {/* Flecha animada de la ruta */}
-              {(() => {
-                const allNodes = Object.values(levelData).flatMap(l => l.nodes);
-                const points = path.map(id => allNodes.find(n => n.node === id)).filter(Boolean) as Node[];
-                if (points.length < 2) return null;
-                let total = 0;
-                const segLengths: number[] = [];
-                for (let i = 0; i < points.length - 1; i++) {
-                  const len = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
-                  segLengths.push(len);
-                  total += len;
-                }
-                if (animPos <= 0 || animPos >= 1) return null;
-                let dist = animPos * total;
-                let segIdx = 0;
-                while (segIdx < segLengths.length && dist > segLengths[segIdx]) {
-                  dist -= segLengths[segIdx];
-                  segIdx++;
-                }
-                if (segIdx >= segLengths.length) segIdx = segLengths.length - 1;
-                const a = points[segIdx];
-                const b = points[segIdx + 1];
-                if (!a || !b) return null;
-
-                let nivelA = null, nivelB = null;
-                for (const [nivelK, dataK] of Object.entries(levelData)) {
-                  if (dataK.nodes.some(n => n.node === a.node)) nivelA = nivelK;
-                  if (dataK.nodes.some(n => n.node === b.node)) nivelB = nivelK;
-                }
-                if (nivelA !== activeNivel || nivelB !== activeNivel) return null;
-
-                let t = segLengths[segIdx] === 0 ? 0 : dist / segLengths[segIdx];
-                t = Math.max(0, Math.min(1, t));
-                const x = a.x + (b.x - a.x) * t;
-                const y = a.y + (b.y - a.y) * t;
-                const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-
-                return (
-                  <g filter="url(#gmaps-arrow-shadow)">
-                    <polygon
-                      points="0,-18 32,0 0,18"
-                      fill="#4285F4"
-                      stroke="#fff"
-                      strokeWidth={3}
-                      opacity={0.98}
-                      transform={`translate(${x},${y}) rotate(${angle})`}
-                    />
-                  </g>
-                );
-              })()}
-            </svg>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-400">
-              Cargando mapa...
+          {!path.length && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+              No hay un camino cargado que una estos dos puntos.
             </div>
           )}
+          {tramos.map((tramo, i) => {
+            const datos = levelData[tramo.nivel];
+            const siguiente = tramos[i + 1];
+            const anterior = tramos[i - 1];
+            const rol = tramos.length === 1 ? "Origen y destino" : i === 0 ? "Origen" : i === tramos.length - 1 ? "Destino" : "De paso";
+            const inicio = tramo.nodos[0];
+            const fin = tramo.nodos[tramo.nodos.length - 1];
+            return (
+              <section key={`${tramo.nivel}-${i}`} ref={el => { seccionRefs.current[i] = el; }} className="scroll-mt-3 scroll-mb-3">
+                <header className="mb-1.5 flex items-center gap-2 text-sm">
+                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-bold text-white">Nivel {tramo.nivel}</span>
+                  <span className="text-zinc-300">{rol}</span>
+                  {siguiente && (
+                    <span className="ml-auto flex items-center gap-1 text-xs text-zinc-300">
+                      {Number(siguiente.nivel) > Number(tramo.nivel) ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+                      Sigue en Nivel {siguiente.nivel}
+                    </span>
+                  )}
+                </header>
+                <svg viewBox="0 0 800 800" className="block w-full rounded-xl bg-zinc-900" role="img" aria-label={`Plano del nivel ${tramo.nivel}`}>
+                  <defs>
+                    <linearGradient id={`ruta-${i}`} x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#4285F4" />
+                      <stop offset="100%" stopColor="#0a58ca" />
+                    </linearGradient>
+                    <filter id={`brillo-${i}`} x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="7" result="coloredBlur" />
+                      <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                    <filter id={`sombra-${i}`} x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.4" />
+                    </filter>
+                    <style>{`
+                      .ruta-guiones { stroke-dasharray: 16 12; animation: ruta-avance 1.2s linear infinite; }
+                      @keyframes ruta-avance { to { stroke-dashoffset: -28; } }
+                    `}</style>
+                  </defs>
+                  {planos[tramo.nivel] && (
+                    <image href={planos[tramo.nivel]} x={0} y={0} width={800} height={800} style={{ pointerEvents: "none" }} />
+                  )}
+
+                  {/* Recorrido en este nivel */}
+                  {tramo.nodos.slice(0, -1).map((a, k) => {
+                    const b = tramo.nodos[k + 1];
+                    return (
+                      <g key={k}>
+                        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#4285F4" strokeWidth={12} opacity={0.5} filter={`url(#brillo-${i})`} />
+                        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={`url(#ruta-${i})`} strokeWidth={7} strokeLinecap="round" />
+                        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fff" strokeWidth={3.5} strokeLinecap="round" />
+                        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fff" strokeWidth={2.5} className="ruta-guiones" opacity={0.7} />
+                      </g>
+                    );
+                  })}
+
+                  {/* Iconos y nombres del nivel */}
+                  {datos?.pois.filter(p => p.icon).map(p => {
+                    const node = datos.nodes.find(n => n.node === p.node) ?? p;
+                    const esOrigen = p.node === from, esDestino = p.node === to;
+                    const size = tamanoIconoPunto(escalaIconos, p.escala) * (esOrigen || esDestino ? 1.3 : 1);
+                    const etiqueta = etiquetaDe(p);
+                    const layout = etiqueta.visible ? layoutEtiqueta(node.x, node.y, etiqueta, size / 2) : null;
+                    return (
+                      <g key={p.node}>
+                        {(esOrigen || esDestino) && (
+                          <rect x={node.x - size / 2 - 5} y={node.y - size / 2 - 5} width={size + 10} height={size + 10} rx={10}
+                            fill="none" stroke={esOrigen ? "#10b981" : "#f43f5e"} strokeWidth={5} />
+                        )}
+                        <image href={iconoUrl(p.icon as string)} x={node.x - size / 2} y={node.y - size / 2} width={size} height={size} style={{ pointerEvents: "none" }} />
+                        {layout && (
+                          <text x={layout.x} y={layout.y} textAnchor={layout.align} dominantBaseline={svgBaseline[layout.baseline]}
+                            fontSize={tamanoEtiqueta(escalaIconos)} fontWeight="bold" fontFamily="Arial, sans-serif"
+                            fill="#111" stroke="rgba(255,255,255,0.9)" strokeWidth={3} paintOrder="stroke" style={{ pointerEvents: "none" }}>
+                            {p.name}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* Origen/destino sin icono: un punto de color */}
+                  {[from, to].filter(id => nivelDeNodo[id] === tramo.nivel && !poiPorId[id]?.icon).map(id => {
+                    const n = nodoPorId[id];
+                    return n ? <circle key={id} cx={n.x} cy={n.y} r={11} fill={id === from ? "#10b981" : "#f43f5e"} stroke="#fff" strokeWidth={4} /> : null;
+                  })}
+
+                  {/* Cambio de nivel: dónde se toma la escalera y por dónde se llega */}
+                  {siguiente && fin && (
+                    <EtiquetaCambio x={fin.x} y={fin.y} texto={`${Number(siguiente.nivel) > Number(tramo.nivel) ? "↑ Subí" : "↓ Bajá"} al Nivel ${siguiente.nivel}`} />
+                  )}
+                  {anterior && inicio && (
+                    <EtiquetaCambio x={inicio.x} y={inicio.y} texto={`Llegás desde Nivel ${anterior.nivel}`} />
+                  )}
+
+                  {/* Flecha animada (la mueve el bucle de animación) */}
+                  <g ref={el => { flechaRefs.current[i] = el; }} visibility="hidden" filter={`url(#sombra-${i})`}>
+                    <polygon points="-16,-18 16,0 -16,18" fill="#4285F4" stroke="#fff" strokeWidth={3} />
+                  </g>
+                </svg>
+              </section>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
-// fin MapVisor
 
-
-// Utilidad para dibujar la flecha sin transformación
-function getArrowPoints(from: Node, to: Node, length: number, width: number) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const angle = Math.atan2(dy, dx);
-  const tipX = to.x;
-  const tipY = to.y;
-  const baseX = tipX - length * Math.cos(angle);
-  const baseY = tipY - length * Math.sin(angle);
-  const leftX = baseX + (width / 2) * Math.sin(angle);
-  const leftY = baseY - (width / 2) * Math.cos(angle);
-  const rightX = baseX - (width / 2) * Math.sin(angle);
-  const rightY = baseY + (width / 2) * Math.cos(angle);
-  return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
+/** Cartel sobre el punto donde se cambia de nivel */
+function EtiquetaCambio({ x, y, texto }: { x: number; y: number; texto: string }) {
+  const ancho = texto.length * 11 + 24;
+  // Arriba del punto; si no entra, abajo
+  const arriba = y > 70;
+  const cy = arriba ? y - 46 : y + 46;
+  const cx = Math.min(800 - ancho / 2 - 4, Math.max(ancho / 2 + 4, x));
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <rect x={cx - ancho / 2} y={cy - 17} width={ancho} height={34} rx={17} fill="#1d4ed8" stroke="#fff" strokeWidth={3} />
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize={19} fontWeight="bold" fontFamily="Arial, sans-serif" fill="#fff">
+        {texto}
+      </text>
+    </g>
+  );
 }
