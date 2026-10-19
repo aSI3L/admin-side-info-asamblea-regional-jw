@@ -36,6 +36,23 @@ export function layoutEtiqueta(x: number, y: number, etiqueta: Etiqueta, mitad: 
     }
 }
 
+// Los nombres pueden tener saltos de línea (cómo se ven sobre el mapa). En listas, títulos e
+// indicaciones se muestran en una sola línea.
+export const lineasNombre = (nombre: string) => nombre.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+export const nombreEnUnaLinea = (nombre: string) => lineasNombre(nombre).join(" ")
+/** Nombre listo para guardar: sin espacios sobrantes ni líneas vacías */
+export const limpiarNombre = (nombre: string) => lineasNombre(nombre).join("\n")
+
+/** Interlineado del nombre, relativo al tamaño de letra */
+export const INTERLINEADO = 1.15
+
+/**
+ * Posición de la primera línea respecto del anclaje, en alturas de línea: centrado se reparte
+ * hacia arriba y abajo, "bottom" crece hacia arriba y "top" hacia abajo.
+ */
+export const desfaseLineas = (baseline: LayoutEtiqueta["baseline"], lineas: number) =>
+    baseline === "middle" ? -(lineas - 1) / 2 : baseline === "bottom" ? -(lineas - 1) : 0
+
 // Equivalencias para dibujar en canvas y en SVG
 export const canvasAlign = { start: "left", middle: "center", end: "right" } as const
 export const svgBaseline = { middle: "central", bottom: "text-after-edge", top: "text-before-edge" } as const

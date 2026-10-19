@@ -9,7 +9,7 @@ import Image from "next/image";
 import { ESCALA_ICONOS, ICONOS, getIcono, iconoUrl, tamanoIconoPunto } from "@/consts/iconos.consts";
 import { useEditarMapaStore } from "@/zustand/editar-mapa.store";
 import { Pencil, Route, Trash2 } from "lucide-react";
-import { canvasAlign, etiquetaDe, layoutEtiqueta, tamanoEtiqueta } from "@/lib/etiquetas";
+import { INTERLINEADO, canvasAlign, desfaseLineas, etiquetaDe, layoutEtiqueta, lineasNombre, tamanoEtiqueta } from "@/lib/etiquetas";
 import type { Etiqueta } from "@/types/mapas.type";
 
 // ─── Snap helpers ─────────────────────────────────────────────────────────────
@@ -355,23 +355,31 @@ export function MapEditor() {
             ctx.font = `bold ${fontSize}px Arial`;
             ctx.textAlign = canvasAlign[layout.align];
             ctx.textBaseline = layout.baseline;
-            const ancho = ctx.measureText(poi.name).width;
+            // El nombre puede tener varias líneas: el bloque se alinea como una sola etiqueta
+            const lineas = lineasNombre(poi.name);
+            const alturaLinea = fontSize * INTERLINEADO;
+            const desfase = desfaseLineas(layout.baseline, lineas.length);
+            const alto = (lineas.length - 1) * alturaLinea + fontSize;
+            const ancho = Math.max(...lineas.map(l => ctx.measureText(l).width));
             const izquierda = layout.align === "start" ? layout.x : layout.align === "end" ? layout.x - ancho : layout.x - ancho / 2;
-            const arriba = layout.baseline === "top" ? layout.y : layout.baseline === "bottom" ? layout.y - fontSize : layout.y - fontSize / 2;
-            labelBoxes.current[poi.node] = { x: izquierda, y: arriba, w: ancho, h: fontSize };
+            const arriba = layout.baseline === "top" ? layout.y : layout.baseline === "bottom" ? layout.y - alto : layout.y - alto / 2;
+            labelBoxes.current[poi.node] = { x: izquierda, y: arriba, w: ancho, h: alto };
             ctx.globalAlpha = etiqueta.visible ? 1 : 0.35;
             if (draggingLabel?.id === poi.node) {
                 ctx.setLineDash([3, 3]);
                 ctx.strokeStyle = "#2563eb";
                 ctx.lineWidth = 1;
-                ctx.strokeRect(izquierda - 3, arriba - 2, ancho + 6, fontSize + 4);
+                ctx.strokeRect(izquierda - 3, arriba - 2, ancho + 6, alto + 4);
                 ctx.setLineDash([]);
             }
             ctx.lineWidth = 3;
             ctx.strokeStyle = "rgba(255,255,255,0.9)";
-            ctx.strokeText(poi.name, layout.x, layout.y);
             ctx.fillStyle = "#111";
-            ctx.fillText(poi.name, layout.x, layout.y);
+            lineas.forEach((linea, i) => {
+                const y = layout.y + (desfase + i) * alturaLinea;
+                ctx.strokeText(linea, layout.x, y);
+                ctx.fillText(linea, layout.x, y);
+            });
             ctx.globalAlpha = 1;
             ctx.textAlign = "left";
             ctx.textBaseline = "alphabetic";
