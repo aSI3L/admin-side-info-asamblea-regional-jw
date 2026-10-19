@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Panel de administración · Asamblea Regional
 
-## Getting Started
+Panel de control de la información que muestra el sitio informativo de la Asamblea Regional: información principal, categorías, usuarios autorizados y **mapas interactivos** de los edificios.
 
-First, run the development server:
+Está hecho con Next.js 15, React 19, Firebase (Auth + Firestore), Zustand y Tailwind.
+
+## Mapas
+
+Los planos son croquis limpios por nivel. Sobre ellos se ubican iconos para cada área y se dibujan los caminos entre áreas, zonas de circulación y escaleras. El visor muestra la ruta animada nivel por nivel.
+
+Toda la explicación está en **[docs/MEJORAS-MAPAS.md](docs/MEJORAS-MAPAS.md)**.
+
+## Desarrollo local
+
+Se trabaja contra los emuladores de Firebase, con datos de ejemplo incluidos en `datos-ejemplo/`. Se necesita Node 20 o superior y Java 21 o superior.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
+npm install
+npm run emulators   # terminal 1
+npm run dev         # terminal 2 → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+El usuario de prueba es `admin@demo.local`; la contraseña está en `scripts/seed-emulators.mjs`. Más detalles en [docs/MEJORAS-MAPAS.md](docs/MEJORAS-MAPAS.md#8-desarrollo-local-con-datos-de-ejemplo).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Producción
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configurar en `.env.local` (o en las variables del hosting) los valores `NEXT_PUBLIC_FIREBASE_*` del proyecto real, sin `NEXT_PUBLIC_USE_FIREBASE_EMULATORS`. Ver `.env.example`.

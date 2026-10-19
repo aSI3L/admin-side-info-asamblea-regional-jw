@@ -10,9 +10,11 @@ interface EditarMapaStore {
     setLevel: (level: string) => void
     layer: string
     setLayer: (layer: string) => void
+    setEscalaIconos: (escala: number) => void
+    guardarEscalaIconos: () => Promise<boolean>
 }
 
-export const useEditarMapaStore = create<EditarMapaStore>((set) => ({
+export const useEditarMapaStore = create<EditarMapaStore>((set, get) => ({
     edificio: null,
     loadingEdificio: false,
     getEdificioById: async (edificioId) => {
@@ -23,5 +25,16 @@ export const useEditarMapaStore = create<EditarMapaStore>((set) => ({
     level: "",
     setLevel: (level) => set({ level }),
     layer: "",
-    setLayer: (layer) => set({ layer })
+    setLayer: (layer) => set({ layer }),
+    // Cambia la escala en pantalla al instante; se persiste aparte con guardarEscalaIconos
+    setEscalaIconos: (escala) => {
+        const { edificio } = get()
+        if (edificio) set({ edificio: { ...edificio, escalaIconos: escala } })
+    },
+    guardarEscalaIconos: async () => {
+        const { edificio } = get()
+        if (!edificio?.id) return false
+        // merge: solo actualiza este campo del edificio
+        return edificiosService.update(edificio.id, { escalaIconos: edificio.escalaIconos } as Building, true)
+    }
 }))
