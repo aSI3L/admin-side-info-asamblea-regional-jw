@@ -5,6 +5,7 @@ import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
 import { loadMapLayers } from "@/services/map-graph.service";
 import { Button } from "@/components/ui/button";
 import { getIcono, iconoUrl, tamanoIconoPunto } from "@/consts/iconos.consts";
+import { nombreEnUnaLinea } from "@/lib/etiquetas";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectLabel, SelectItem } from "@/components/ui/select";
 import type { Node, PointOfInterest, Vector } from "@/types/mapas.type";
 import { Link2, X } from "lucide-react";
@@ -124,7 +125,7 @@ export function ConnectStairsModal({ open, onOpenChange, onConnect }: ConnectSta
     onOpenChange(false);
   };
 
-  const nombre = (id: string) => `${poiPorNodo[id]?.name ?? "Punto"} (N${nivelDeNodo[id]})`;
+  const nombre = (id: string) => `${poiPorNodo[id] ? nombreEnUnaLinea(poiPorNodo[id].name) : "Punto"} (N${nivelDeNodo[id]})`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -174,15 +175,15 @@ export function ConnectStairsModal({ open, onOpenChange, onConnect }: ConnectSta
                       const elegido = orden >= 0;
                       const letras = letrasDeNodo[p.node];
                       return (
-                        <g key={p.node} onClick={() => toggleSelect(p.node)} className="cursor-pointer" role="button" aria-pressed={elegido} aria-label={`${p.name}, nivel ${nivel}`}>
-                          <title>{p.name}</title>
+                        <g key={p.node} onClick={() => toggleSelect(p.node)} className="cursor-pointer" role="button" aria-pressed={elegido} aria-label={`${nombreEnUnaLinea(p.name)}, nivel ${nivel}`}>
+                          <title>{nombreEnUnaLinea(p.name)}</title>
                           <rect x={p.x - s / 2 - 8} y={p.y - s / 2 - 8} width={s + 16} height={s + 16} rx={14}
                             fill={elegido ? "rgba(37,99,235,0.25)" : "rgba(255,255,255,0.75)"} stroke={elegido ? "#2563eb" : "#64748b"} strokeWidth={elegido ? 6 : 2} />
                           {p.icon
                             ? <image href={iconoUrl(p.icon)} x={p.x - s / 2} y={p.y - s / 2} width={s} height={s} />
                             : <circle cx={p.x} cy={p.y} r={s / 3} fill="#2563eb" />}
                           <text x={p.x} y={p.y + s / 2 + 26} textAnchor="middle" fontSize={22} fontWeight="bold" fontFamily="Arial"
-                            fill="#111" stroke="#fff" strokeWidth={5} paintOrder="stroke">{p.name}</text>
+                            fill="#111" stroke="#fff" strokeWidth={5} paintOrder="stroke">{nombreEnUnaLinea(p.name)}</text>
                           {letras && (
                             <g>
                               <circle cx={p.x + s / 2 + 4} cy={p.y - s / 2 - 4} r={17} fill="#16a34a" stroke="#fff" strokeWidth={3} />

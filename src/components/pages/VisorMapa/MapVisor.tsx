@@ -5,7 +5,7 @@ import { edificiosService } from "@/services/index.generic.service";
 import type { Node, Vector, PointOfInterest } from "@/types/mapas.type";
 import { ZoomIn, ZoomOut, Maximize, List, X, ArrowUp, ArrowDown } from "lucide-react";
 import { getIcono, iconoUrl, tamanoIconoPunto } from "@/consts/iconos.consts";
-import { etiquetaDe, layoutEtiqueta, svgBaseline, tamanoEtiqueta } from "@/lib/etiquetas";
+import { INTERLINEADO, desfaseLineas, etiquetaDe, layoutEtiqueta, lineasNombre, nombreEnUnaLinea, svgBaseline, tamanoEtiqueta } from "@/lib/etiquetas";
 
 type DatosNivel = { nodes: Node[]; connections: Vector[]; pois: PointOfInterest[] };
 
@@ -109,6 +109,8 @@ export function MapVisor({ edificioId, capa, from, to, onInstructionsChange }: M
     }
     return { nivelDeNodo, nodoPorId, poiPorId };
   }, [levelData]);
+  // Nombre de un punto en una sola línea (los saltos de línea son sólo para el mapa)
+  const nombreDe = (id: string) => (poiPorId[id] ? nombreEnUnaLinea(poiPorId[id].name) : "");
 
   // Ruta y su división en tramos por nivel (en orden: origen arriba, destino abajo)
   const path = useMemo(() => {
@@ -142,24 +144,24 @@ export function MapVisor({ edificioId, capa, from, to, onInstructionsChange }: M
       onInstructionsChange(from && to ? ["No hay un camino cargado que una estos dos puntos."] : []);
       return;
     }
-    const pasos: string[] = [`Partida desde: ${poiPorId[from]?.name || "Punto de inicio"}`];
+    const pasos: string[] = [`Partida desde: ${nombreDe(from) || "Punto de inicio"}`];
     tramos.forEach((tramo, i) => {
       // Lugares con nombre por los que se pasa (sin repetir origen, destino ni escaleras)
       tramo.nodos.forEach((n, k) => {
         const poi = poiPorId[n.node];
         const esCambioDeNivel = (i > 0 && k === 0) || (i < tramos.length - 1 && k === tramo.nodos.length - 1);
         if (poi && n.node !== from && n.node !== to && !esCambioDeNivel && !getIcono(poi.icon)?.cambioNivel) {
-          pasos.push(`Pasá por: ${poi.name}`);
+          pasos.push(`Pasá por: ${nombreEnUnaLinea(poi.name)}`);
         }
       });
       const siguiente = tramos[i + 1];
       if (siguiente) {
-        const escalera = poiPorId[tramo.nodos[tramo.nodos.length - 1].node]?.name || "la escalera";
+        const escalera = nombreDe(tramo.nodos[tramo.nodos.length - 1].node) || "la escalera";
         const verbo = Number(siguiente.nivel) > Number(tramo.nivel) ? "subí" : "bajá";
         pasos.push(`Tomá ${escalera} y ${verbo} al Nivel ${siguiente.nivel}`);
       }
     });
-    pasos.push(`Llegada a: ${poiPorId[to]?.name || "Destino"}`);
+    pasos.push(`Llegada a: ${nombreDe(to) || "Destino"}`);
     onInstructionsChange(pasos);
   }, [cargado, path, tramos, poiPorId, from, to, onInstructionsChange]);
 
@@ -330,7 +332,7 @@ export function MapVisor({ edificioId, capa, from, to, onInstructionsChange }: M
                   <li key={ref.node} className="flex items-center gap-2 text-sm text-zinc-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={iconoUrl(ref.icon as string)} alt="" className="w-6 h-6 shrink-0" />
-                    <span className="leading-tight">{ref.name}</span>
+                    <span className="leading-tight">{nombreEnUnaLinea(ref.name)}</span>
                   </li>
                 ))}
               </ul>
@@ -422,7 +424,11 @@ export function MapVisor({ edificioId, capa, from, to, onInstructionsChange }: M
                           <text x={layout.x} y={layout.y} textAnchor={layout.align} dominantBaseline={svgBaseline[layout.baseline]}
                             fontSize={tamanoEtiqueta(escalaIconos)} fontWeight="bold" fontFamily="Arial, sans-serif"
                             fill="#111" stroke="rgba(255,255,255,0.9)" strokeWidth={3} paintOrder="stroke" style={{ pointerEvents: "none" }}>
-                            {p.name}
+                            {lineasNombre(p.name).map((linea, i, lineas) => (
+                              <tspan key={i} x={layout.x} dy={`${(i === 0 ? desfaseLineas(layout.baseline, lineas.length) : 1) * INTERLINEADO}em`}>
+                                {linea}
+                              </tspan>
+                            ))}
                           </text>
                         )}
                       </g>

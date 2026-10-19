@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { EyeOff, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { iconoUrl } from "@/consts/iconos.consts";
+import { nombreEnUnaLinea } from "@/lib/etiquetas";
 
 export function POI() {
     const pois = useGrafoMapaStore(state => state.pois);
@@ -41,7 +42,7 @@ export function POI() {
                                     ) : (
                                         <span className="h-6 w-6 shrink-0" />
                                     )}
-                                    <Badge className="text-sm truncate">{poi.name}</Badge>
+                                    <Badge className="text-sm truncate">{nombreEnUnaLinea(poi.name)}</Badge>
                                     {poi.etiqueta?.visible === false && (
                                         <EyeOff className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-label="Nombre oculto en el mapa" />
                                     )}
@@ -51,7 +52,7 @@ export function POI() {
                                     onClick={() => setPoiEnEdicion(poi.node)}
                                     className="rounded p-1 text-slate-600 hover:bg-slate-200 cursor-pointer"
                                     title="Editar"
-                                    aria-label={`Editar ${poi.name}`}
+                                    aria-label={`Editar ${nombreEnUnaLinea(poi.name)}`}
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </button>
@@ -60,7 +61,7 @@ export function POI() {
                                     onClick={() => deleteNode(poi.node)}
                                     className="rounded p-1 text-red-700 hover:bg-red-100 cursor-pointer"
                                     title="Eliminar"
-                                    aria-label={`Eliminar ${poi.name}`}
+                                    aria-label={`Eliminar ${nombreEnUnaLinea(poi.name)}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>

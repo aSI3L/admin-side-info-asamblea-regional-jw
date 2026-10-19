@@ -3,7 +3,7 @@ import { Dialog, DialogPortal, DialogOverlay, DialogContent, DialogTitle, Dialog
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ESCALA_ICONO_PROPIA, IconoMapa, iconoUrl } from "@/consts/iconos.consts";
-import { DISTANCIA_ETIQUETA, ETIQUETA_DEFECTO } from "@/lib/etiquetas";
+import { DISTANCIA_ETIQUETA, ETIQUETA_DEFECTO, limpiarNombre } from "@/lib/etiquetas";
 import type { Etiqueta, PosicionEtiqueta } from "@/types/mapas.type";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Move, Trash2 } from "lucide-react";
 
@@ -43,7 +43,7 @@ export function RenamePoiModal({ open, onOpenChange, initialName, initialIcon, i
   const confirmar = () => {
     if (!name.trim()) return;
     // El tamaño por defecto no se guarda: así sigue cualquier cambio de la escala general
-    onConfirm(name.trim(), icon, etiqueta, escala === ESCALA_ICONO_PROPIA.defecto ? undefined : escala);
+    onConfirm(limpiarNombre(name), icon, etiqueta, escala === ESCALA_ICONO_PROPIA.defecto ? undefined : escala);
     onOpenChange(false);
   };
 
@@ -54,14 +54,17 @@ export function RenamePoiModal({ open, onOpenChange, initialName, initialIcon, i
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogTitle>Punto de interés</DialogTitle>
           <label className="text-sm font-medium mt-2">Nombre (es el que se ve en el visor y en las referencias)</label>
-          <input
-            className="w-full border rounded px-2 py-1 mb-2 placeholder:text-muted-foreground"
+          {/* Enter confirma; Shift+Enter agrega un salto de línea (así se ve el nombre sobre el mapa) */}
+          <textarea
+            className="w-full resize-none border rounded px-2 py-1 placeholder:text-muted-foreground"
             placeholder="Ej: Baños Norte"
+            rows={Math.min(4, Math.max(2, name.split("\n").length))}
             value={name}
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") confirmar(); }}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmar(); } }}
             autoFocus
           />
+          <p className="text-xs text-muted-foreground mb-2">Shift+Enter para partir el nombre en varias líneas sobre el mapa.</p>
           <label className="text-sm font-medium">Icono</label>
           <div className="grid grid-cols-6 gap-1.5 max-h-56 overflow-y-auto">
             <button
