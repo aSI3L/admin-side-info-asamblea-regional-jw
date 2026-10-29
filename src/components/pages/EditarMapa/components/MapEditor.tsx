@@ -1,16 +1,36 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useEditMapEdificio } from "@/hooks/useEditMapEdificio";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { RenamePoiModal } from "./RenamePoiModal";
 import { useGrafoMapaStore } from "@/zustand/grafo-mapa.store";
 import { loadMapLayers } from "@/services/map-graph.service";
 import Image from "next/image";
 import { ESCALA_ICONOS, ICONOS, getIcono, iconoUrl, tamanoIconoPunto } from "@/consts/iconos.consts";
 import { useEditarMapaStore } from "@/zustand/editar-mapa.store";
-import { Pencil, Route, Trash2 } from "lucide-react";
+import { Maximize, Minus, Pencil, Plus, RotateCcw, RotateCw, Route, Trash2 } from "lucide-react";
 import { INTERLINEADO, canvasAlign, desfaseLineas, etiquetaDe, layoutEtiqueta, lineasNombre, tamanoEtiqueta } from "@/lib/etiquetas";
 import type { Etiqueta } from "@/types/mapas.type";
+import type { SentidoGiro } from "@/lib/croquis";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+
+/** Lado del lienzo donde viven plano y coordenadas */
+const LIENZO = 800;
+
+/** Zoom del editor: sólo agranda el plano; nodos, iconos y nombres se ven siempre del mismo tamaño */
+const ZOOM = { min: 1, max: 6, paso: 1.25 };
+/** Resolución máxima del lienzo (px de lado), para no agotar la memoria con mucho zoom */
+const RESOLUCION_MAX = 4096;
+
+/** Separaciones del nombre llevadas a la escala de pantalla (el nombre se dibuja igual con cualquier zoom) */
+const etiquetaConZoom = (etiqueta: Etiqueta, k: number): Etiqueta => ({
+    ...etiqueta,
+    distancia: etiqueta.distancia * k,
+    dx: etiqueta.dx !== undefined ? etiqueta.dx * k : undefined,
+    dy: etiqueta.dy !== undefined ? etiqueta.dy * k : undefined,
+});
 
 // ─── Snap helpers ─────────────────────────────────────────────────────────────
 
@@ -142,6 +162,40 @@ export function MapEditor() {
     const [snapAngleInput, setSnapAngleInput] = useState<string>("");
     const SNAP_STEP = 45;
 
+    // ── Zoom y desplazamiento ────────────────────────────────────────────────
+    const [zoom, setZoom] = useState(1);
+    const zoomRef = useRef(1);
+    zoomRef.current = zoom;
+    const resolucion = Math.min(RESOLUCION_MAX, Math.round(LIENZO * 1.5 * zoom));
+    const viewportRef = useRef<HTMLDivElement | null>(null);
+    // Punto del plano (0-1) que debe quedar bajo una posición del visor después de cambiar el zoom
+    const anclaZoom = useRef<{ fx: number; fy: number; vx: number; vy: number } | null>(null);
+    // Arrastrar el plano: con Espacio, botón del medio o derecho
+    const [espacioPresionado, setEspacioPresionado] = useState(false);
+    const [paneando, setPaneando] = useState(false);
+    const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+
+    /** Cambia el zoom manteniendo fijo el punto del plano que está en (vx, vy) del visor (por defecto, el centro) */
+    const zoomEn = useCallback((nuevo: number, vx?: number, vy?: number) => {
+        const vp = viewportRef.current;
+        const z = Math.min(ZOOM.max, Math.max(ZOOM.min, nuevo));
+        if (!vp || z === zoomRef.current) return;
+        const px = vx ?? vp.clientWidth / 2;
+        const py = vy ?? vp.clientHeight / 2;
+        const lado = vp.scrollWidth;
+        anclaZoom.current = { fx: (vp.scrollLeft + px) / lado, fy: (vp.scrollTop + py) / lado, vx: px, vy: py };
+        setZoom(z);
+    }, []);
+
+    useLayoutEffect(() => {
+        const vp = viewportRef.current;
+        const ancla = anclaZoom.current;
+        if (!vp || !ancla) return;
+        anclaZoom.current = null;
+        vp.scrollLeft = ancla.fx * vp.scrollWidth - ancla.vx;
+        vp.scrollTop = ancla.fy * vp.scrollHeight - ancla.vy;
+    }, [zoom]);
+
     // Drag state
     const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
     const isDraggingRef = useRef(false); // ref para evitar closures stale en handlers
@@ -174,6 +228,10 @@ export function MapEditor() {
             // Atajos del plano: no aplican mientras se escribe ni con un diálogo abierto
             const escribiendo = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable=true], [role=dialog]");
             if (escribiendo) return;
+            if (e.key === " ") {
+                e.preventDefault(); // que no desplace la página
+                setEspacioPresionado(true);
+            }
             if (e.key === "Escape") {
                 setIconoAColocar(null);
                 useGrafoMapaStore.getState().clearSelection();
@@ -183,7 +241,10 @@ export function MapEditor() {
                 if (seleccionado) borrar(seleccionado);
             }
         };
-        const onKeyUp = (e: KeyboardEvent) => { if (e.key === "Shift") setIsShiftHeld(false); };
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.key === "Shift") setIsShiftHeld(false);
+            if (e.key === " ") setEspacioPresionado(false);
+        };
         window.addEventListener("keydown", onKeyDown);
         window.addEventListener("keyup", onKeyUp);
         return () => {
@@ -194,10 +255,10 @@ export function MapEditor() {
 
     // ── Canvas coord helper ──────────────────────────────────────────────────
     const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } => {
-        const canvas = e.currentTarget as HTMLCanvasElement;
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
+        // Coordenadas en unidades del mapa, sin importar el zoom ni la resolución del lienzo
+        const rect = e.currentTarget.getBoundingClientRect();
+        const scaleX = LIENZO / rect.width;
+        const scaleY = LIENZO / rect.height;
         return {
             x: (e.clientX - rect.left) * scaleX,
             y: (e.clientY - rect.top) * scaleY,
@@ -206,10 +267,10 @@ export function MapEditor() {
 
     // Buscar nodo cercano a una posición
     const findNodeAt = (x: number, y: number) => {
-        // Los iconos se pueden tomar desde cualquier parte de su superficie
+        // Los iconos se pueden tomar desde cualquier parte de su superficie (se ven del mismo tamaño con cualquier zoom)
         return nodes.find(n => {
             const poi = pois.find(p => p.node === n.node && p.icon);
-            const radio = poi ? Math.max(15, tamanoDe(poi) / 2) : 15;
+            const radio = (poi ? Math.max(15, tamanoDe(poi) / 2) : 15) / zoom;
             return Math.hypot(n.x - x, n.y - y) < radio;
         });
     };
@@ -231,7 +292,13 @@ export function MapEditor() {
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Se dibuja en unidades del mapa (800x800), sea cual sea la resolución del lienzo
+        const r = canvas.width / LIENZO;
+        ctx.setTransform(r, 0, 0, r, 0, 0);
+        // Medidas de pantalla (nodos, trazos, letras): se dividen por el zoom para no agrandarse
+        const k = 1 / zoom;
 
         // Dibujar conexiones locales
         connections.forEach(({ origen, destino, nivel_origen, nivel_destino }) => {
@@ -242,40 +309,31 @@ export function MapEditor() {
                 ctx.moveTo(nodeA.x, nodeA.y);
                 ctx.lineTo(nodeB.x, nodeB.y);
                 ctx.strokeStyle = "#888";
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2 * k;
                 ctx.setLineDash([]);
                 ctx.stroke();
-            } else if (nodeA && !nodeB) {
+            } else if (nodeA || nodeB) {
+                // Tramo hacia otro nivel: línea hasta el borde superior con el destino
+                const local = (nodeA ?? nodeB)!;
+                const otro = nodeA ? destino : origen;
+                const otroNivel = nodeA ? nivel_destino : nivel_origen;
                 ctx.beginPath();
-                ctx.moveTo(nodeA.x, nodeA.y);
-                ctx.lineTo(nodeA.x, 0);
+                ctx.moveTo(local.x, local.y);
+                ctx.lineTo(local.x, 0);
                 ctx.strokeStyle = "#f59e42";
-                ctx.setLineDash([6, 6]);
-                ctx.lineWidth = 2;
+                ctx.setLineDash([6 * k, 6 * k]);
+                ctx.lineWidth = 2 * k;
                 ctx.stroke();
                 ctx.setLineDash([]);
-                ctx.font = "bold 12px Arial";
+                ctx.font = `bold ${12 * k}px Arial`;
                 ctx.fillStyle = "#f59e42";
-                const destLabel = `→ ${destino}${nivel_destino !== undefined ? ` (Nivel ${nivel_destino})` : ''}`;
-                ctx.fillText(destLabel, nodeA.x + 8, 16);
-            } else if (!nodeA && nodeB) {
-                ctx.beginPath();
-                ctx.moveTo(nodeB.x, nodeB.y);
-                ctx.lineTo(nodeB.x, 0);
-                ctx.strokeStyle = "#f59e42";
-                ctx.setLineDash([6, 6]);
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.font = "bold 12px Arial";
-                ctx.fillStyle = "#f59e42";
-                const destLabel = `→ ${origen}${nivel_origen !== undefined ? ` (Nivel ${nivel_origen})` : ''}`;
-                ctx.fillText(destLabel, nodeB.x + 8, 16);
+                const destLabel = `→ ${otro}${otroNivel !== undefined ? ` (Nivel ${otroNivel})` : ''}`;
+                ctx.fillText(destLabel, local.x + 8 * k, 16 * k);
             }
         });
 
         // ── Preview de conexión ghost ────────────────────────────────────────
-        if (selectedNode && mousePos && !draggingNodeId) {
+        if (selectedNode && mousePos && !draggingNodeId && !paneando) {
             const fromNode = nodes.find(n => n.node === selectedNode);
             if (fromNode) {
                 const { x: snapX, y: snapY, angleDeg } = computeSnapped(mousePos.x, mousePos.y);
@@ -285,17 +343,17 @@ export function MapEditor() {
                 ctx.moveTo(fromNode.x, fromNode.y);
                 ctx.lineTo(snapX, snapY);
                 ctx.strokeStyle = "rgba(37,99,235,0.55)";
-                ctx.lineWidth = 2;
-                ctx.setLineDash([6, 4]);
+                ctx.lineWidth = 2 * k;
+                ctx.setLineDash([6 * k, 4 * k]);
                 ctx.stroke();
                 ctx.setLineDash([]);
 
                 // Punto de destino snap
                 ctx.beginPath();
-                ctx.arc(snapX, snapY, 6, 0, 2 * Math.PI);
+                ctx.arc(snapX, snapY, 6 * k, 0, 2 * Math.PI);
                 ctx.fillStyle = "rgba(37,99,235,0.35)";
                 ctx.strokeStyle = "#2563eb";
-                ctx.lineWidth = 1.5;
+                ctx.lineWidth = 1.5 * k;
                 ctx.fill();
                 ctx.stroke();
 
@@ -307,12 +365,12 @@ export function MapEditor() {
                     const label = `${displayAngle}°`;
                     const midX = (fromNode.x + snapX) / 2;
                     const midY = (fromNode.y + snapY) / 2;
-                    ctx.font = "bold 11px Arial";
+                    ctx.font = `bold ${11 * k}px Arial`;
                     const tw = ctx.measureText(label).width;
                     ctx.fillStyle = "rgba(255,255,255,0.85)";
-                    ctx.fillRect(midX - tw / 2 - 3, midY - 10, tw + 6, 15);
+                    ctx.fillRect(midX - tw / 2 - 3 * k, midY - 10 * k, tw + 6 * k, 15 * k);
                     ctx.fillStyle = "#1d4ed8";
-                    ctx.fillText(label, midX - tw / 2, midY + 2);
+                    ctx.fillText(label, midX - tw / 2, midY + 2 * k);
                 }
             }
         }
@@ -321,10 +379,10 @@ export function MapEditor() {
         nodes.forEach((node) => {
             const isDragging = draggingNodeId === node.node;
             ctx.beginPath();
-            ctx.arc(node.x, node.y, isDragging ? 12 : 10, 0, 2 * Math.PI);
+            ctx.arc(node.x, node.y, (isDragging ? 12 : 10) * k, 0, 2 * Math.PI);
             ctx.fillStyle = selectedNode === node.node ? "#2563eb" : isDragging ? "#93c5fd" : "#fff";
             ctx.strokeStyle = "#2563eb";
-            ctx.lineWidth = isDragging ? 3 : 2;
+            ctx.lineWidth = (isDragging ? 3 : 2) * k;
             ctx.fill();
             ctx.stroke();
         });
@@ -333,14 +391,14 @@ export function MapEditor() {
         pois.forEach((poi) => {
             const node = nodes.find(n => n.node === poi.node) ?? poi;
             const img = poi.icon ? iconImages.current[poi.icon] : undefined;
-            const iconSize = tamanoDe(poi);
+            const iconSize = tamanoDe(poi) * k;
             const half = iconSize / 2;
             if (img?.complete && img.naturalWidth) {
                 if (selectedNode === poi.node || draggingNodeId === poi.node) {
                     ctx.beginPath();
-                    ctx.roundRect(node.x - half - 4, node.y - half - 4, iconSize + 8, iconSize + 8, 9);
+                    ctx.roundRect(node.x - half - 4 * k, node.y - half - 4 * k, iconSize + 8 * k, iconSize + 8 * k, 9 * k);
                     ctx.strokeStyle = "#2563eb";
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 3 * k;
                     ctx.stroke();
                 }
                 ctx.drawImage(img, node.x - half, node.y - half, iconSize, iconSize);
@@ -350,8 +408,8 @@ export function MapEditor() {
             delete labelBoxes.current[poi.node];
             const seleccionado = selectedNode === poi.node || draggingLabel?.id === poi.node;
             if (!etiqueta.visible && !seleccionado) return;
-            const fontSize = tamanoEtiqueta(escalaIconos);
-            const layout = layoutEtiqueta(node.x, node.y, etiqueta, img ? half : 10);
+            const fontSize = tamanoEtiqueta(escalaIconos) * k;
+            const layout = layoutEtiqueta(node.x, node.y, etiquetaConZoom(etiqueta, k), img ? half : 10 * k);
             ctx.font = `bold ${fontSize}px Arial`;
             ctx.textAlign = canvasAlign[layout.align];
             ctx.textBaseline = layout.baseline;
@@ -366,13 +424,13 @@ export function MapEditor() {
             labelBoxes.current[poi.node] = { x: izquierda, y: arriba, w: ancho, h: alto };
             ctx.globalAlpha = etiqueta.visible ? 1 : 0.35;
             if (draggingLabel?.id === poi.node) {
-                ctx.setLineDash([3, 3]);
+                ctx.setLineDash([3 * k, 3 * k]);
                 ctx.strokeStyle = "#2563eb";
-                ctx.lineWidth = 1;
-                ctx.strokeRect(izquierda - 3, arriba - 2, ancho + 6, alto + 4);
+                ctx.lineWidth = k;
+                ctx.strokeRect(izquierda - 3 * k, arriba - 2 * k, ancho + 6 * k, alto + 4 * k);
                 ctx.setLineDash([]);
             }
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 3 * k;
             ctx.strokeStyle = "rgba(255,255,255,0.9)";
             ctx.fillStyle = "#111";
             lineas.forEach((linea, i) => {
@@ -384,7 +442,7 @@ export function MapEditor() {
             ctx.textAlign = "left";
             ctx.textBaseline = "alphabetic";
         });
-    }, [nodes, connections, pois, selectedNode, mousePos, draggingNodeId, draggingLabel, computeSnapped, isShiftHeld, snapAngleDeg, iconsVersion, tamanoDe, escalaIconos]);
+    }, [nodes, connections, pois, selectedNode, mousePos, draggingNodeId, draggingLabel, computeSnapped, isShiftHeld, snapAngleDeg, iconsVersion, tamanoDe, escalaIconos, zoom, resolucion, paneando]);
 
     // Nombre de punto bajo el cursor (para arrastrarlo)
     const findLabelAt = (x: number, y: number) => {
@@ -396,6 +454,12 @@ export function MapEditor() {
 
     // ── Mouse Move ───────────────────────────────────────────────────────────
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const vp = viewportRef.current;
+        if (panRef.current && vp) {
+            vp.scrollLeft = panRef.current.left - (e.clientX - panRef.current.x);
+            vp.scrollTop = panRef.current.top - (e.clientY - panRef.current.y);
+            return;
+        }
         const { x, y } = getCanvasCoords(e);
 
         if (draggingNodeId && isDraggingRef.current) {
@@ -412,8 +476,9 @@ export function MapEditor() {
                     ...etiquetaDe(poi),
                     visible: true,
                     posicion: "libre",
-                    dx: Math.round(x - draggingLabel.grabDx - node.x),
-                    dy: Math.round(y - draggingLabel.grabDy - node.y),
+                    // El nombre se ve a escala de pantalla: se guarda en unidades del mapa sin zoom
+                    dx: Math.round((x - draggingLabel.grabDx - node.x) * zoom),
+                    dy: Math.round((y - draggingLabel.grabDy - node.y) * zoom),
                 });
             }
             return;
@@ -424,6 +489,15 @@ export function MapEditor() {
 
     // ── Mouse Down (inicia drag si toca un nodo o un nombre) ─────────────────
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const vp = viewportRef.current;
+        if (vp && (e.button === 1 || e.button === 2 || (e.button === 0 && espacioPresionado))) {
+            // Arrastrar el plano para recorrerlo con zoom
+            e.preventDefault();
+            panRef.current = { x: e.clientX, y: e.clientY, left: vp.scrollLeft, top: vp.scrollTop };
+            setPaneando(true);
+            isDraggingRef.current = true; // el clic que sigue no crea nada
+            return;
+        }
         if (e.button !== 0) return; // solo click izquierdo
         const { x, y } = getCanvasCoords(e);
         const node = findNodeAt(x, y);
@@ -444,6 +518,8 @@ export function MapEditor() {
 
     // ── Mouse Up (finaliza drag) ─────────────────────────────────────────────
     const handleMouseUp = () => {
+        panRef.current = null;
+        setPaneando(false);
         setDraggingNodeId(null);
         setDraggingLabel(null);
         // isDraggingRef.current se resetea DESPUÉS del click handler con un pequeño delay
@@ -454,6 +530,8 @@ export function MapEditor() {
 
     // ── Mouse Leave ──────────────────────────────────────────────────────────
     const handleMouseLeave = () => {
+        panRef.current = null;
+        setPaneando(false);
         setMousePos(null);
         setDraggingNodeId(null);
         setDraggingLabel(null);
@@ -564,6 +642,40 @@ export function MapEditor() {
         setSnapAngleInput("");
     };
 
+    // ── Ctrl + rueda (o pellizcar en el touchpad): zoom donde está el cursor ──
+    useEffect(() => {
+        const vp = viewportRef.current;
+        if (!vp) return;
+        const onWheel = (e: WheelEvent) => {
+            if (!e.ctrlKey && !e.metaKey) return; // la rueda sola desplaza el plano
+            e.preventDefault();
+            const rect = vp.getBoundingClientRect();
+            const delta = Math.max(-100, Math.min(100, e.deltaY));
+            zoomEn(zoomRef.current * Math.exp(-delta * 0.002), e.clientX - rect.left, e.clientY - rect.top);
+        };
+        // pasivo: false para poder evitar el zoom de la página
+        vp.addEventListener("wheel", onWheel, { passive: false });
+        return () => vp.removeEventListener("wheel", onWheel);
+    }, [planoUrl, zoomEn]);
+
+    // ── Girar el plano (con sus puntos) ──────────────────────────────────────
+    const rotarPlano = useEditarMapaStore(state => state.rotarPlano);
+    const [giroPendiente, setGiroPendiente] = useState<SentidoGiro | null>(null);
+    const [girando, setGirando] = useState(false);
+    const confirmarGiro = async () => {
+        if (!giroPendiente) return;
+        setGirando(true);
+        try {
+            await rotarPlano(giroPendiente);
+            toast.success("Plano girado y guardado");
+            setGiroPendiente(null);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "No se pudo girar el plano");
+        } finally {
+            setGirando(false);
+        }
+    };
+
     // ── Render ───────────────────────────────────────────────────────────────
     return (
         <Card className="py-2">
@@ -618,6 +730,16 @@ export function MapEditor() {
                                 {estadoEscala === "guardado" && "Guardado"}
                                 {estadoEscala === "error" && "No se pudo guardar"}
                             </span>
+                            {/* ── Girar el plano: los puntos lo acompañan sin girar ── */}
+                            <div className="ml-auto flex items-center gap-1">
+                                <span className="font-semibold whitespace-nowrap">Girar plano</span>
+                                <button type="button" className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-700 hover:bg-slate-100 cursor-pointer" title="Girar 90° a la izquierda" onClick={() => setGiroPendiente(-1)}>
+                                    <RotateCcw className="h-4 w-4" />
+                                </button>
+                                <button type="button" className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-700 hover:bg-slate-100 cursor-pointer" title="Girar 90° a la derecha" onClick={() => setGiroPendiente(1)}>
+                                    <RotateCw className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                         {iconoAColocar && (
                             <p className="pb-2 text-xs text-slate-600">
@@ -625,19 +747,28 @@ export function MapEditor() {
                             </p>
                         )}
                         <div className="relative">
+                        {/* Visor: con zoom el plano crece adentro y se recorre con scroll o arrastrando */}
+                        <div
+                            ref={viewportRef}
+                            className="aspect-square w-full rounded-md"
+                            style={{ overflow: zoom > 1 ? "auto" : "hidden", overscrollBehavior: "contain" }}
+                        >
+                        <div className="relative" style={{ width: `${zoom * 100}%` }}>
                         <Image
                             src={planoUrl}
                             alt="Mapa"
-                            className="w-full h-auto object-cover rounded-md"
+                            className="w-full h-auto object-cover rounded-md select-none"
                             width={800}
                             height={800}
+                            draggable={false}
                         />
                         <canvas
                             ref={canvasRef}
                             className="absolute top-0 left-0 w-full h-full pointer-events-auto rounded-xl z-20"
-                            width={800}
-                            height={800}
-                            style={{ cursor: draggingNodeId ? "grabbing" : iconoAColocar ? "copy" : selectedNode ? "crosshair" : "default" }}
+                            width={resolucion}
+                            height={resolucion}
+                            style={{ cursor: paneando ? "grabbing" : espacioPresionado ? "grab" : draggingNodeId ? "grabbing" : iconoAColocar ? "copy" : selectedNode ? "crosshair" : "default" }}
+                            onContextMenu={e => e.preventDefault()}
                             onClick={handleCanvasClick}
                             onDoubleClick={handleCanvasDoubleClick}
                             onMouseMove={handleMouseMoveWithDragDetect}
@@ -651,9 +782,9 @@ export function MapEditor() {
                             <div
                                 className="absolute z-30 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
                                 style={{
-                                    left: `${(nodoSeleccionado.x / 800) * 100}%`,
-                                    // Justo encima del icono (según su tamaño) o del nodo
-                                    top: `calc(${((nodoSeleccionado.y - (poiSeleccionado?.icon ? tamanoDe(poiSeleccionado) / 2 : 10) - 6) / 800) * 100}% - 2.3rem)`,
+                                    left: `${(nodoSeleccionado.x / LIENZO) * 100}%`,
+                                    // Justo encima del icono (según su tamaño en pantalla) o del nodo
+                                    top: `calc(${((nodoSeleccionado.y - ((poiSeleccionado?.icon ? tamanoDe(poiSeleccionado) / 2 : 10) + 6) / zoom) / LIENZO) * 100}% - 2.3rem)`,
                                 }}
                             >
                                 <button
@@ -674,6 +805,23 @@ export function MapEditor() {
                                 </button>
                             </div>
                         )}
+
+                        </div>
+                        </div>
+
+                        {/* ── Zoom ── */}
+                        <div className="absolute top-3 left-4 z-30 flex items-center gap-1 rounded-xl border border-blue-100 bg-white/92 px-1.5 py-1 shadow-md backdrop-blur-sm">
+                            <button type="button" className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-40 cursor-pointer" title="Alejar (Ctrl + rueda)" disabled={zoom <= ZOOM.min} onClick={() => zoomEn(zoom / ZOOM.paso)}>
+                                <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-11 text-center font-mono text-xs text-slate-600">{Math.round(zoom * 100)}%</span>
+                            <button type="button" className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-40 cursor-pointer" title="Acercar (Ctrl + rueda)" disabled={zoom >= ZOOM.max} onClick={() => zoomEn(zoom * ZOOM.paso)}>
+                                <Plus className="h-4 w-4" />
+                            </button>
+                            <button type="button" className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-40 cursor-pointer" title="Ver el plano completo" disabled={zoom === 1} onClick={() => zoomEn(1)}>
+                                <Maximize className="h-4 w-4" />
+                            </button>
+                        </div>
 
                         {/* ── Panel de control de snap ── */}
                         <div className="absolute top-3 right-4 z-30 flex items-center gap-2 bg-white/92 backdrop-blur-sm border border-blue-100 rounded-xl px-3 py-2 shadow-md">
@@ -707,6 +855,22 @@ export function MapEditor() {
                         </div>
 
                         </div>
+
+                        <Dialog open={giroPendiente !== null} onOpenChange={abierto => { if (!abierto && !girando) setGiroPendiente(null); }}>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>¿Girar el plano 90° a la {giroPendiente === 1 ? "derecha" : "izquierda"}?</DialogTitle>
+                                    <DialogDescription>
+                                        Los iconos, nombres y caminos de <b>todas las capas</b> de este nivel se mueven junto con el plano,
+                                        sin girar. Se guarda enseguida, incluidos los cambios sin guardar de las capas.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button variant="outline" disabled={girando} onClick={() => setGiroPendiente(null)}>Cancelar</Button>
+                                    <Button disabled={girando} onClick={confirmarGiro}>{girando ? "Girando…" : "Girar y guardar"}</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
 
                         <RenamePoiModal
                             open={renameModalOpen}

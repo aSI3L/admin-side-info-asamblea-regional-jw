@@ -41,6 +41,14 @@ export function Instructions() {
                     <Badge>8</Badge>
                     <span><b>Arrastre</b> cualquier nodo o icono con el mouse para reubicarlo de forma precisa.</span>
                 </div>
+                <div className="flex gap-2 items-center">
+                    <Badge>9</Badge>
+                    <span>Para <b>acercar el plano</b> use los botones <b>+ / −</b> o <b>Ctrl + rueda</b> (o pellizque el touchpad); los iconos y nombres mantienen su tamaño. Recorra el plano con la rueda o <b>arrastrando con Espacio</b>, el botón del medio o el derecho.</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                    <Badge>10</Badge>
+                    <span>Con <b>Girar plano</b> el croquis gira 90° y los puntos y caminos de todas las capas del nivel lo acompañan, sin girar. Se guarda al instante.</span>
+                </div>
             </CardContent>
         </Card>
     )
